@@ -32,7 +32,7 @@ echo.
 echo ==============================================================================
 echo       PROCESO COMPLETADO EXITOSAMENTE!
 echo       - Excel consolidado generado: Consolidado_Bienvenida_Facilitadores.xlsx
-echo       - Tablero HTML actualizado: tablero.html y tablero_respaldo.html
+echo       - Tablero HTML actualizado: tablero.html, tablero_respaldo.html e index.html
 echo ==============================================================================
 echo.
 pause

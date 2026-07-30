@@ -1,465 +1,4 @@
-import os
-import sys
-import glob
-import json
-import io
-import shutil
-import tempfile
-import pandas as pd
-import openpyxl
-from datetime import datetime
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-from openpyxl.utils import get_column_letter
-from openpyxl.chart import BarChart, PieChart, Reference
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ASISTENCIA_DIR = os.path.join(BASE_DIR, "Asistencia")
-PLANTA_DIR = os.path.join(BASE_DIR, "Planta")
-EXCEL_OUTPUT = os.path.join(BASE_DIR, "Consolidado_Bienvenida_Facilitadores.xlsx")
-HTML_OUTPUT = os.path.join(BASE_DIR, "tablero.html")
-HTML_RESPALDO = os.path.join(BASE_DIR, "tablero_respaldo.html")
-HTML_INDEX = os.path.join(BASE_DIR, "index.html")
-
-print("=== INICIANDO PROCESAMIENTO BIENVENIDA FACILITADORES CUN ===")
-
-# --- DICCIONARIO DE LIMPIEZA DE CARACTERES (ESTILO procesar_reporte.ps1) ---
-replacements = [
-    ("Ã\xa0", "a"), ("Ã¡", "a"), ("Ã\xa2", "a"), ("Ã£", "a"), ("Ã¤", "a"),
-    ("Ã¨", "e"), ("Ã©", "e"), ("Ãª", "e"), ("Ã«", "e"),
-    ("Ã¬", "i"), ("Ã\xad", "i"), ("Ã®", "i"), ("Ã¯", "i"),
-    ("Ã²", "o"), ("Ã³", "o"), ("Ã´", "o"), ("Ãµ", "o"), ("Ã¶", "o"),
-    ("Ã¹", "u"), ("Ãº", "u"), ("Ã»", "u"), ("Ã¼", "u"),
-    ("Ã±", "n"), ("Ã‘", "N"), ("Â¿", ""),
-    ("Ã\x81", "A"), ("Ã\x89", "E"), ("Ã\x8d", "I"), ("Ã\x93", "O"), ("Ã\x9a", "U"),
-    ("á", "a"), ("é", "e"), ("í", "i"), ("ó", "o"), ("ú", "u"), ("ñ", "n"),
-    ("Á", "A"), ("É", "E"), ("Í", "I"), ("Ó", "O"), ("Ú", "U"), ("Ñ", "N")
-]
-
-def clean_text(txt):
-    if pd.isna(txt) or txt is None:
-        return ""
-    s = str(txt)
-    for old, new in replacements:
-        s = s.replace(old, new)
-    return s.strip()
-
-# 1. Cargar y Limpiar Archivo de Asistencia
-csv_files = glob.glob(os.path.join(ASISTENCIA_DIR, "*.csv"))
-if not csv_files:
-    csv_files = glob.glob(os.path.join(ASISTENCIA_DIR, "**", "*.csv"), recursive=True)
-
-if not csv_files:
-    print("ERROR: No se encontró ningún archivo .csv en la carpeta Asistencia.")
-    sys.exit(1)
-
-csv_files.sort(key=os.path.getmtime, reverse=True)
-asistencia_file = csv_files[0]
-print(f"[1/5] Limpiando y procesando archivo de Asistencia: {os.path.basename(asistencia_file)}")
-
-try:
-    df_asist_raw = pd.read_csv(asistencia_file, encoding='utf-8')
-except Exception:
-    df_asist_raw = pd.read_csv(asistencia_file, encoding='latin1')
-
-print(f"      Total registros recibidos en Asistencia: {len(df_asist_raw)}")
-
-col_ced_asist = next((c for c in df_asist_raw.columns if 'CEDULA' in str(c).upper() or 'IDENTIFICAC' in str(c).upper()), df_asist_raw.columns[0])
-col_nom_asist = next((c for c in df_asist_raw.columns if 'NAME' in str(c).upper() or 'NOMBRE' in str(c).upper()), df_asist_raw.columns[1] if len(df_asist_raw.columns) > 1 else df_asist_raw.columns[0])
-
-df_asist_clean = pd.DataFrame()
-df_asist_clean['CEDULA'] = pd.to_numeric(df_asist_raw[col_ced_asist], errors='coerce').astype('Int64').astype(str).str.strip()
-
-def format_nombre(val):
-    txt = clean_text(val)
-    if ',' in txt:
-        parts = txt.split(',', 1)
-        return f"{parts[1].strip()} {parts[0].strip()}".upper()
-    return txt.upper()
-
-df_asist_clean['NOMBRE'] = df_asist_raw[col_nom_asist].apply(format_nombre)
-
-# 2. Cargar Base de Planta
-xlsx_files = glob.glob(os.path.join(PLANTA_DIR, "*.xlsx"))
-if not xlsx_files:
-    xlsx_files = glob.glob(os.path.join(PLANTA_DIR, "**", "*.xlsx"), recursive=True)
-
-if not xlsx_files:
-    print("ERROR: No se encontró ningún archivo .xlsx en la carpeta Planta.")
-    sys.exit(1)
-
-def load_excel_safely(file_path):
-    try:
-        with open(file_path, 'rb') as f:
-            content = f.read()
-    except (PermissionError, OSError):
-        import subprocess
-        temp_path = os.path.join(tempfile.gettempdir(), f"temp_{os.path.basename(file_path)}")
-        cmd = f'powershell -Command "Copy-Item -Path \'{os.path.abspath(file_path)}\' -Destination \'{temp_path}\' -Force"'
-        subprocess.run(cmd, shell=True, check=True)
-        with open(temp_path, 'rb') as f:
-            content = f.read()
-        try:
-            os.remove(temp_path)
-        except Exception:
-            pass
-    return pd.ExcelFile(io.BytesIO(content))
-
-planta_file = xlsx_files[0]
-print(f"[2/5] Cargando base de referencia Planta: {os.path.basename(planta_file)}")
-
-xl_planta = load_excel_safely(planta_file)
-sheet_planta = "BASE FACILITADORES PRINCIPAL " if "BASE FACILITADORES PRINCIPAL " in xl_planta.sheet_names else xl_planta.sheet_names[0]
-df_planta_raw = pd.read_excel(xl_planta, sheet_name=sheet_planta)
-
-col_ced_planta = next((c for c in df_planta_raw.columns if 'IDENTIFICAC' in str(c).upper() or 'CEDULA' in str(c).upper()), df_planta_raw.columns[6])
-col_nom_planta = next((c for c in df_planta_raw.columns if 'NOMBRE' in str(c).upper() and 'COMPLETO' in str(c).upper()), df_planta_raw.columns[7])
-col_invitacion = next((c for c in df_planta_raw.columns if 'INVITAC' in str(c).upper()), 'INVITACIÓN')
-col_nivel1 = next((c for c in df_planta_raw.columns if 'NIVEL 1' in str(c).upper()), 'Nombre Nivel 1')
-col_nivel2 = next((c for c in df_planta_raw.columns if 'NIVEL 2' in str(c).upper()), 'Nombre Nivel 2')
-col_nivel3 = next((c for c in df_planta_raw.columns if 'NIVEL 3' in str(c).upper()), 'Nombre Nivel 3')
-col_modalidad_alt = next((c for c in df_planta_raw.columns if 'MODALIDAD' in str(c).upper()), 'Modalidad')
-col_cargo = next((c for c in df_planta_raw.columns if 'CARGO' in str(c).upper()), 'Descripción Cargo')
-col_centro_costo = next((c for c in df_planta_raw.columns if 'CENTRO COSTO' in str(c).upper()), 'Nombre Centro Costo')
-col_escuela = next((c for c in df_planta_raw.columns if 'ESCUELA' in str(c).upper()), 'ESCUELA')
-
-df_planta_raw['CEDULA_CLEAN'] = pd.to_numeric(df_planta_raw[col_ced_planta], errors='coerce').astype('Int64').astype(str).str.strip()
-planta_cedulas_set = set(df_planta_raw['CEDULA_CLEAN'].dropna().unique())
-total_planta = len(df_planta_raw)
-
-# Reorganizar PLANTA_BASE con CÉDULA en Columna A (Col 1)
-planta_cols_ordered = [
-    'CEDULA_CLEAN',
-    col_invitacion,
-    col_nom_planta,
-    col_nivel1,
-    col_nivel2,
-    col_nivel3,
-    col_modalidad_alt,
-    col_cargo,
-    col_centro_costo
-]
-for c in df_planta_raw.columns:
-    if c not in planta_cols_ordered and c != col_ced_planta:
-        planta_cols_ordered.append(c)
-
-df_planta_export = df_planta_raw[planta_cols_ordered].copy()
-df_planta_export.rename(columns={'CEDULA_CLEAN': 'CEDULA'}, inplace=True)
-
-# 3. Deduplicación y Validación contra Planta
-print("[3/5] Validando presencia en Planta y detectando duplicados...")
-
-is_duplicated_in_asist = df_asist_clean.duplicated(subset=['CEDULA'], keep='first')
-is_not_in_planta = ~df_asist_clean['CEDULA'].isin(planta_cedulas_set)
-
-df_duplicados = df_asist_clean[is_duplicated_in_asist | is_not_in_planta].copy()
-df_unicos = df_asist_clean[~is_duplicated_in_asist & ~is_not_in_planta].copy()
-
-print(f"      Total Facilitadores en Base Planta: {total_planta}")
-print(f"      Registros Válidos y Únicos (Consolidado_Unicos): {len(df_unicos)}")
-print(f"      Registros Duplicados / No Encontrados en Planta (Duplicados): {len(df_duplicados)}")
-
-# 4. Generar Libro de Excel con Fórmulas VLOOKUP Desplegadas en 1.500 Filas
-TOTAL_FILAS_DESPLEGADAS = 1500
-print(f"[4/5] Desplegando fórmulas BUSCARV a lo largo de {TOTAL_FILAS_DESPLEGADAS} filas en las columnas...")
-
-wb = openpyxl.Workbook()
-wb.remove(wb.active)
-
-header_fill = PatternFill(start_color="004B28", end_color="004B28", fill_type="solid")
-header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-data_font = Font(name="Calibri", size=11, color="1F2937")
-border_thin = Side(style='thin', color="D1D5DB")
-cell_border = Border(left=border_thin, right=border_thin, top=border_thin, bottom=border_thin)
-alt_fill = PatternFill(start_color="F9FAFB", end_color="F9FAFB", fill_type="solid")
-
-headers_consolidado = [
-    'INVITACIÓN',
-    'CEDULA',
-    'NOMBRE',
-    'Nombre Nivel 2',
-    'Nombre Nivel 3',
-    'Descripción Cargo',
-    'Nombre Centro Costo',
-    'ESCUELA'
-]
-
-def format_consolidado_with_full_column_formulas(ws, df_asist_data):
-    ws.views.sheetView[0].showGridLines = True
-    ws.append(headers_consolidado)
-    
-    for col_num, h in enumerate(headers_consolidado, 1):
-        cell = ws.cell(row=1, column=col_num)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    ws.row_dimensions[1].height = 28
-
-    data_rows = list(df_asist_data.itertuples(index=False))
-    num_data_rows = len(data_rows)
-    total_rows = max(num_data_rows, TOTAL_FILAS_DESPLEGADAS)
-
-    for r_idx in range(2, total_rows + 2):
-        if (r_idx - 2) < num_data_rows:
-            row_data = data_rows[r_idx - 2]
-            ced_cell_value = str(row_data.CEDULA)
-            nom_formula = str(row_data.NOMBRE)
-        else:
-            ced_cell_value = ""
-            nom_formula = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 3, FALSE), ""))'
-
-        formula_invitacion = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 2, FALSE), "NO ENCONTRADO EN PLANTA"))'
-        formula_nivel2     = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 5, FALSE), "NO ENCONTRADO EN PLANTA"))'
-        formula_nivel3     = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 6, FALSE), "NO ENCONTRADO EN PLANTA"))'
-        formula_cargo      = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 8, FALSE), "DOCENTE / FACILITADOR"))'
-        formula_centro_costo = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 9, FALSE), "GENERAL"))'
-        formula_escuela    = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 17, FALSE), "GENERAL"))'
-
-        ws.cell(row=r_idx, column=1, value=formula_invitacion)
-        ws.cell(row=r_idx, column=2, value=ced_cell_value)
-        ws.cell(row=r_idx, column=3, value=nom_formula)
-        ws.cell(row=r_idx, column=4, value=formula_nivel2)
-        ws.cell(row=r_idx, column=5, value=formula_nivel3)
-        ws.cell(row=r_idx, column=6, value=formula_cargo)
-        ws.cell(row=r_idx, column=7, value=formula_centro_costo)
-        ws.cell(row=r_idx, column=8, value=formula_escuela)
-        
-        ws.row_dimensions[r_idx].height = 20
-        use_alt = (r_idx % 2 == 0)
-        for c_idx in range(1, len(headers_consolidado) + 1):
-            cell = ws.cell(row=r_idx, column=c_idx)
-            cell.font = data_font
-            cell.border = cell_border
-            if use_alt:
-                cell.fill = alt_fill
-            
-            if c_idx == 2: # CEDULA
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.number_format = '0'
-            elif c_idx in [1, 4, 5, 8]: # INVITACION, Nivel 2, Nivel 3, ESCUELA
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-            else:
-                cell.alignment = Alignment(horizontal="left", vertical="center")
-
-    for col in ws.columns:
-        col_letter = get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = 22
-
-def format_planta_sheet(ws, df_data):
-    ws.views.sheetView[0].showGridLines = True
-    headers = list(df_data.columns)
-    ws.append(headers)
-    
-    for col_num, h in enumerate(headers, 1):
-        cell = ws.cell(row=1, column=col_num)
-        cell.fill = header_fill
-        cell.font = header_font
-        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-    ws.row_dimensions[1].height = 28
-
-    for r_idx, row in enumerate(df_data.itertuples(index=False), start=2):
-        ws.append(list(row))
-        ws.row_dimensions[r_idx].height = 20
-        use_alt = (r_idx % 2 == 0)
-        for c_idx in range(1, len(headers) + 1):
-            cell = ws.cell(row=r_idx, column=c_idx)
-            cell.font = data_font
-            cell.border = cell_border
-            if use_alt:
-                cell.fill = alt_fill
-            
-            if headers[c_idx-1] == 'CEDULA':
-                cell.alignment = Alignment(horizontal="center", vertical="center")
-                cell.number_format = '0'
-            else:
-                cell.alignment = Alignment(horizontal="left", vertical="center")
-
-    for col in ws.columns:
-        col_letter = get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = 18
-
-# Hoja 1: Consolidado_Unicos
-ws_unicos = wb.create_sheet(title="Consolidado_Unicos")
-format_consolidado_with_full_column_formulas(ws_unicos, df_unicos)
-
-# Hoja 2: Duplicados
-ws_duplicados = wb.create_sheet(title="Duplicados")
-format_consolidado_with_full_column_formulas(ws_duplicados, df_duplicados)
-
-# Hoja 3: PLANTA_BASE
-ws_planta = wb.create_sheet(title="PLANTA_BASE")
-format_planta_sheet(ws_planta, df_planta_export)
-
-# Hoja 4: Resumen_y_Graficos
-ws_resumen = wb.create_sheet(title="Resumen_y_Graficos")
-ws_resumen.views.sheetView[0].showGridLines = True
-ws_resumen.cell(row=1, column=1, value="RESUMEN EJECUTIVO DE ASISTENCIA CUN").font = Font(name="Calibri", size=16, bold=True, color="004B28")
-
-planta_lookup = df_planta_raw.drop_duplicates(subset=['CEDULA_CLEAN']).set_index('CEDULA_CLEAN')
-
-eval_records = []
-asistentes_data = []
-
-for idx, row in df_unicos.iterrows():
-    ced = row['CEDULA']
-    nom = row['NOMBRE']
-    
-    if ced in planta_lookup.index:
-        p_row = planta_lookup.loc[ced]
-        inv_val = clean_text(p_row.get(col_invitacion, ''))
-        if not inv_val or inv_val.upper() == 'NAN':
-            inv_val = clean_text(p_row.get(col_modalidad_alt, 'VIRTUAL'))
-        reg_val = clean_text(p_row.get(col_nivel2, 'NO ASIGNADO'))
-        sed_val = clean_text(p_row.get(col_nivel3, 'NO ASIGNADO'))
-        car_val = clean_text(p_row.get(col_cargo, 'DOCENTE / FACILITADOR'))
-        cc_val  = clean_text(p_row.get(col_centro_costo, 'GENERAL'))
-        esc_val = clean_text(p_row.get(col_escuela, 'GENERAL'))
-    else:
-        inv_val = "VIRTUAL"
-        reg_val = "REGIONAL BOGOTA"
-        sed_val = "BOGOTA CENTRO"
-        car_val = "DOCENTE / FACILITADOR"
-        cc_val  = "GENERAL"
-        esc_val = "GENERAL"
-
-    inv_upper = inv_val.upper()
-    tipo_mod = 'PRESENCIAL' if ('PRESENCIAL' in inv_upper or 'BOGOTA' in inv_upper or 'BOGOTÁ' in inv_upper or 'SEDE' in inv_upper) else 'VIRTUAL'
-
-    record_dict = {
-        'INVITACIÓN': inv_val,
-        'CEDULA': ced,
-        'NOMBRE': nom,
-        'Nombre Nivel 2': reg_val,
-        'Nombre Nivel 3': sed_val,
-        'Descripción Cargo': car_val,
-        'Nombre Centro Costo': cc_val,
-        'ESCUELA': esc_val,
-        'TIPO_MODALIDAD': tipo_mod
-    }
-    eval_records.append(record_dict)
-
-    asistentes_data.append({
-        'cedula': str(ced),
-        'nombre': str(nom),
-        'escuela': str(esc_val),
-        'centro_costo': str(cc_val),
-        'regional': str(reg_val),
-        'sede': str(sed_val),
-        'cargo': str(car_val),
-        'modalidad': str(tipo_mod),
-        'invitacion': str(inv_val)
-    })
-
-df_eval = pd.DataFrame(eval_records)
-
-ws_resumen.cell(row=3, column=1, value="Modalidad / Invitación").font = header_font
-ws_resumen.cell(row=3, column=1).fill = header_fill
-ws_resumen.cell(row=3, column=2, value="Cantidad Registros").font = header_font
-ws_resumen.cell(row=3, column=2).fill = header_fill
-
-if len(df_eval) > 0:
-    modalidad_counts = df_eval['INVITACIÓN'].value_counts()
-    row_curr = 4
-    for mod_name, count_val in modalidad_counts.items():
-        ws_resumen.cell(row=row_curr, column=1, value=str(mod_name)).border = cell_border
-        ws_resumen.cell(row=row_curr, column=2, value=int(count_val)).border = cell_border
-        ws_resumen.cell(row=row_curr, column=2).alignment = Alignment(horizontal="center")
-        row_curr += 1
-
-    ws_resumen.cell(row=row_curr, column=1, value="TOTAL GENERAL").font = Font(bold=True)
-    ws_resumen.cell(row=row_curr, column=1).border = cell_border
-    ws_resumen.cell(row=row_curr, column=2, value=f"=SUM(B4:B{row_curr-1})").font = Font(bold=True)
-    ws_resumen.cell(row=row_curr, column=2).border = cell_border
-    ws_resumen.cell(row=row_curr, column=2).alignment = Alignment(horizontal="center")
-
-    pie = PieChart()
-    labels = Reference(ws_resumen, min_col=1, min_row=4, max_row=row_curr-1)
-    data = Reference(ws_resumen, min_col=2, min_row=3, max_row=row_curr-1)
-    pie.add_data(data, titles_from_data=True)
-    pie.set_categories(labels)
-    pie.title = "Distribución por Modalidad (Únicos Válidos)"
-    pie.width = 14
-    pie.height = 8
-    ws_resumen.add_chart(pie, "D3")
-
-    row_reg_start = row_curr + 3
-    ws_resumen.cell(row=row_reg_start, column=1, value="Regional (Nombre Nivel 2)").font = header_font
-    ws_resumen.cell(row=row_reg_start, column=1).fill = header_fill
-    ws_resumen.cell(row=row_reg_start, column=2, value="Presenciales").font = header_font
-    ws_resumen.cell(row=row_reg_start, column=2).fill = header_fill
-
-    regional_presencial = df_eval[df_eval['TIPO_MODALIDAD'] == 'PRESENCIAL']['Nombre Nivel 2'].value_counts()
-    row_curr_reg = row_reg_start + 1
-    for reg_name, count_val in regional_presencial.items():
-        ws_resumen.cell(row=row_curr_reg, column=1, value=str(reg_name)).border = cell_border
-        ws_resumen.cell(row=row_curr_reg, column=2, value=int(count_val)).border = cell_border
-        ws_resumen.cell(row=row_curr_reg, column=2).alignment = Alignment(horizontal="center")
-        row_curr_reg += 1
-
-    if len(regional_presencial) > 0:
-        chart_bar = BarChart()
-        chart_bar.type = "col"
-        chart_bar.style = 10
-        chart_bar.title = "Participación Presencial por Regional"
-        chart_bar.y_axis.title = "Cantidad"
-        chart_bar.x_axis.title = "Regional"
-        data_bar = Reference(ws_resumen, min_col=2, min_row=row_reg_start, max_row=row_curr_reg-1)
-        cats_bar = Reference(ws_resumen, min_col=1, min_row=row_reg_start+1, max_row=row_curr_reg-1)
-        chart_bar.add_data(data_bar, titles_from_data=True)
-        chart_bar.set_categories(cats_bar)
-        chart_bar.width = 16
-        chart_bar.height = 8
-        ws_resumen.add_chart(chart_bar, f"D{row_reg_start}")
-
-# Guardar con manejo de bloqueo si el archivo está abierto en Excel
-try:
-    wb.save(EXCEL_OUTPUT)
-    print("      Libro Excel consolidado guardado exitosamente.")
-except PermissionError:
-    print("      ADVERTENCIA: El archivo Consolidado_Bienvenida_Facilitadores.xlsx está abierto por el usuario.")
-    alt_out = os.path.join(BASE_DIR, "Consolidado_Bienvenida_Facilitadores_Nuevo.xlsx")
-    wb.save(alt_out)
-    print(f"      Guardado exitosamente en copia alternativa: {alt_out}")
-
-# 5. Generar Tablero HTML (CON CORRECCIÓN DEL BUSCADOR DE ASISTENTES)
-print("=== PREPARANDO DATOS PARA EL TABLERO HTML (CON BUSCADOR 100% FUNCIONAL) ===")
-
-total_registros = len(df_eval)
-presencial_count = len(df_eval[df_eval['TIPO_MODALIDAD'] == 'PRESENCIAL']) if total_registros > 0 else 0
-virtual_count = len(df_eval[df_eval['TIPO_MODALIDAD'] == 'VIRTUAL']) if total_registros > 0 else 0
-
-pct_asistencia_global = round((total_registros / total_planta) * 100, 1) if total_planta > 0 else 0
-regional_presencial_dict = df_eval[df_eval['TIPO_MODALIDAD'] == 'PRESENCIAL']['Nombre Nivel 2'].value_counts().to_dict() if total_registros > 0 else {}
-
-escuelas_data = []
-if total_registros > 0:
-    for escuela, group in df_eval.groupby('ESCUELA'):
-        t_count = len(group)
-        p_count = len(group[group['TIPO_MODALIDAD'] == 'PRESENCIAL'])
-        v_count = len(group[group['TIPO_MODALIDAD'] == 'VIRTUAL'])
-        pct = round((t_count / total_registros) * 100, 1) if total_registros > 0 else 0
-        
-        regiones_presenciales = group[group['TIPO_MODALIDAD'] == 'PRESENCIAL']['Nombre Nivel 2'].value_counts().to_dict()
-        regiones_virtuales = group[group['TIPO_MODALIDAD'] == 'VIRTUAL']['Nombre Nivel 2'].value_counts().to_dict()
-        sedes_detalle = group['Nombre Nivel 3'].value_counts().to_dict()
-        centros_costo_detalle = group['Nombre Centro Costo'].value_counts().to_dict()
-
-        escuelas_data.append({
-            'escuela': str(escuela),
-            'total': t_count,
-            'presencial': p_count,
-            'virtual': v_count,
-            'porcentaje': pct,
-            'regiones_presencial': regiones_presenciales,
-            'regiones_virtual': regiones_virtuales,
-            'sedes': sedes_detalle,
-            'centros_costo': centros_costo_detalle
-        })
-
-    escuelas_data.sort(key=lambda x: x['total'], reverse=True)
-
-fecha_actualizacion = datetime.now().strftime("%d/%m/%Y %I:%M %p")
-
-html_content = f"""<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -468,7 +7,7 @@ html_content = f"""<!DOCTYPE html>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {{
+        :root {
             --cun-green: #00A859;
             --cun-green-glow: #00FF87;
             --cun-dark: #050B14;
@@ -477,24 +16,24 @@ html_content = f"""<!DOCTYPE html>
             --cun-text: #F3F4F6;
             --cun-muted: #9CA3AF;
             --cun-border: rgba(0, 168, 89, 0.3);
-        }}
+        }
 
-        * {{
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Plus Jakarta Sans', sans-serif;
-        }}
+        }
 
-        body {{
+        body {
             background-color: var(--cun-dark);
             color: var(--cun-text);
             min-height: 100vh;
             overflow-x: hidden;
             position: relative;
-        }}
+        }
 
-        #galaxy-canvas {{
+        #galaxy-canvas {
             position: fixed;
             top: 0;
             left: 0;
@@ -502,18 +41,18 @@ html_content = f"""<!DOCTYPE html>
             height: 100vh;
             z-index: 0;
             pointer-events: none;
-        }}
+        }
 
-        .dashboard-container {{
+        .dashboard-container {
             position: relative;
             z-index: 1;
             max-width: 1350px;
             margin: 0 auto;
             padding: 2rem 1.5rem;
-        }}
+        }
 
         /* Header con Logo CUN Directo */
-        header {{
+        header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -524,15 +63,15 @@ html_content = f"""<!DOCTYPE html>
             border-radius: 24px;
             margin-bottom: 2rem;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }}
+        }
 
-        .brand-section {{
+        .brand-section {
             display: flex;
             align-items: center;
             gap: 1.75rem;
-        }}
+        }
 
-        .brand-logo-container {{
+        .brand-logo-container {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -542,52 +81,52 @@ html_content = f"""<!DOCTYPE html>
             margin: 0;
             box-shadow: none;
             backdrop-filter: none;
-        }}
+        }
 
-        .brand-logo-img {{
+        .brand-logo-img {
             height: 75px;
             max-width: 240px;
             width: auto;
             object-fit: contain;
             filter: none;
-        }}
+        }
 
-        .brand-title h1 {{
+        .brand-title h1 {
             font-size: 1.85rem;
             font-weight: 800;
             letter-spacing: -0.5px;
             background: linear-gradient(90deg, #FFFFFF, #00FF87);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-        }}
+        }
 
-        .brand-title p {{
+        .brand-title p {
             font-size: 0.95rem;
             color: var(--cun-muted);
             margin-top: 2px;
-        }}
+        }
 
-        .header-actions {{
+        .header-actions {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
             gap: 0.5rem;
-        }}
+        }
 
-        .header-banner-img {{
+        .header-banner-img {
             height: 62px;
             width: auto;
             object-fit: contain;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0, 242, 254, 0.2);
             transition: transform 0.3s ease;
-        }}
+        }
 
-        .header-banner-img:hover {{
+        .header-banner-img:hover {
             transform: scale(1.03);
-        }}
+        }
 
-        .live-badge {{
+        .live-badge {
             display: flex;
             align-items: center;
             gap: 6px;
@@ -595,9 +134,9 @@ html_content = f"""<!DOCTYPE html>
             border: 1px solid rgba(0, 255, 135, 0.25);
             padding: 3px 10px;
             border-radius: 8px;
-        }}
+        }
 
-        .live-dot {{
+        .live-dot {
             width: 6px;
             height: 6px;
             background-color: var(--cun-green-glow);
@@ -605,37 +144,37 @@ html_content = f"""<!DOCTYPE html>
             box-shadow: 0 0 8px var(--cun-green-glow);
             animation: pulse 1.5s infinite;
             flex-shrink: 0;
-        }}
+        }
 
-        .live-info {{
+        .live-info {
             display: flex;
             align-items: center;
             gap: 6px;
             line-height: 1;
-        }}
+        }
 
-        .live-title {{
+        .live-title {
             font-size: 0.55rem;
             font-weight: 700;
             color: var(--cun-green-glow);
             letter-spacing: 0.5px;
             text-transform: uppercase;
-        }}
+        }
 
-        .live-date {{
+        .live-date {
             font-size: 0.65rem;
             font-weight: 600;
             color: #FFFFFF;
-        }}
+        }
 
-        @keyframes pulse {{
-            0% {{ transform: scale(0.95); opacity: 0.8; }}
-            50% {{ transform: scale(1.25); opacity: 1; }}
-            100% {{ transform: scale(0.95); opacity: 0.8; }}
-        }}
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.25); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
 
         /* HERO CARD PRINCIPAL: TOTAL REGISTROS ÚNICOS VÁLIDOS (CON BOTÓN INTERACTIVO LISTADO COMPLETO) */
-        .kpi-hero-card {{
+        .kpi-hero-card {
             background: var(--cun-card-bg);
             backdrop-filter: blur(16px);
             border: 1px solid var(--cun-border);
@@ -647,15 +186,15 @@ html_content = f"""<!DOCTYPE html>
             box-shadow: 0 12px 40px rgba(0, 168, 89, 0.15);
             transition: all 0.3s ease;
             cursor: pointer;
-        }}
+        }
 
-        .kpi-hero-card:hover {{
+        .kpi-hero-card:hover {
             border-color: var(--cun-green-glow);
             box-shadow: 0 16px 50px rgba(0, 255, 135, 0.25);
             transform: translateY(-2px);
-        }}
+        }
 
-        .kpi-hero-card::after {{
+        .kpi-hero-card::after {
             content: "Haz clic aquí para ver el listado completo de asistentes ➔";
             position: absolute;
             top: 18px;
@@ -668,28 +207,28 @@ html_content = f"""<!DOCTYPE html>
             padding: 6px 14px;
             border-radius: 20px;
             transition: all 0.3s ease;
-        }}
+        }
 
-        .kpi-hero-card:hover::after {{
+        .kpi-hero-card:hover::after {
             background: rgba(0, 242, 254, 0.2);
             box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
-        }}
+        }
 
-        .hero-header {{
+        .hero-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1.25rem;
-        }}
+        }
 
-        .hero-info .kpi-title {{
+        .hero-info .kpi-title {
             font-size: 1rem;
             color: var(--cun-muted);
             font-weight: 700;
             letter-spacing: 0.5px;
-        }}
+        }
 
-        .hero-info .kpi-value {{
+        .hero-info .kpi-value {
             font-size: 3.5rem;
             font-weight: 800;
             color: #FFFFFF;
@@ -698,18 +237,18 @@ html_content = f"""<!DOCTYPE html>
             background: linear-gradient(90deg, #FFFFFF, var(--cun-cyan));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-        }}
+        }
 
-        .hero-info .kpi-subtext {{
+        .hero-info .kpi-subtext {
             font-size: 0.85rem;
             color: var(--cun-muted);
-        }}
+        }
 
-        .hero-progress-wrapper {{
+        .hero-progress-wrapper {
             margin-top: 1rem;
-        }}
+        }
 
-        .hero-progress-meta {{
+        .hero-progress-meta {
             display: flex;
             justify-content: space-between;
             font-size: 0.82rem;
@@ -717,48 +256,48 @@ html_content = f"""<!DOCTYPE html>
             color: var(--cun-muted);
             margin-bottom: 8px;
             letter-spacing: 0.5px;
-        }}
+        }
 
-        .hero-progress-meta span.highlight {{
+        .hero-progress-meta span.highlight {
             color: var(--cun-green-glow);
             font-weight: 800;
-        }}
+        }
 
-        .hero-progress-bg {{
+        .hero-progress-bg {
             width: 100%;
             height: 12px;
             background: rgba(255, 255, 255, 0.08);
             border-radius: 20px;
             overflow: hidden;
             position: relative;
-        }}
+        }
 
-        .hero-progress-fill {{
+        .hero-progress-fill {
             height: 100%;
-            width: {pct_asistencia_global}%;
+            width: 2.9%;
             min-width: 2%;
             background: linear-gradient(90deg, #00A859, #00FF87, #00F2FE);
             background-size: 200% 100%;
             border-radius: 20px;
             animation: glowGradient 3s infinite linear;
             transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }}
+        }
 
-        @keyframes glowGradient {{
-            0% {{ background-position: 0% 50%; }}
-            50% {{ background-position: 100% 50%; }}
-            100% {{ background-position: 0% 50%; }}
-        }}
+        @keyframes glowGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
 
         /* SUBGRID: ASISTENCIA PRESENCIAL Y ASISTENCIA VIRTUAL (DEBAJO) */
-        .kpi-subgrid {{
+        .kpi-subgrid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.5rem;
             margin-bottom: 2.5rem;
-        }}
+        }
 
-        .kpi-card {{
+        .kpi-card {
             background: var(--cun-card-bg);
             backdrop-filter: blur(16px);
             border: 1px solid var(--cun-border);
@@ -767,19 +306,19 @@ html_content = f"""<!DOCTYPE html>
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-        }}
+        }
 
-        .kpi-card:hover {{
+        .kpi-card:hover {
             transform: translateY(-5px);
             border-color: var(--cun-green-glow);
             box-shadow: 0 12px 40px rgba(0, 168, 89, 0.2);
-        }}
+        }
 
-        .kpi-card.clickable {{
+        .kpi-card.clickable {
             cursor: pointer;
-        }}
+        }
 
-        .kpi-card.clickable::after {{
+        .kpi-card.clickable::after {
             content: "Clic para desglose regional ➔";
             position: absolute;
             bottom: 10px;
@@ -788,16 +327,16 @@ html_content = f"""<!DOCTYPE html>
             color: var(--cun-cyan);
             opacity: 0.9;
             font-weight: 700;
-        }}
+        }
 
-        .kpi-header {{
+        .kpi-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1rem;
-        }}
+        }
 
-        .kpi-icon {{
+        .kpi-icon {
             width: 46px;
             height: 46px;
             border-radius: 14px;
@@ -805,55 +344,55 @@ html_content = f"""<!DOCTYPE html>
             align-items: center;
             justify-content: center;
             font-size: 1.35rem;
-        }}
+        }
 
-        .icon-total {{ background: rgba(0, 242, 254, 0.15); color: var(--cun-cyan); }}
-        .icon-presencial {{ background: rgba(0, 255, 135, 0.15); color: var(--cun-green-glow); }}
-        .icon-virtual {{ background: rgba(168, 85, 247, 0.15); color: #C084FC; }}
+        .icon-total { background: rgba(0, 242, 254, 0.15); color: var(--cun-cyan); }
+        .icon-presencial { background: rgba(0, 255, 135, 0.15); color: var(--cun-green-glow); }
+        .icon-virtual { background: rgba(168, 85, 247, 0.15); color: #C084FC; }
 
-        .kpi-title {{
+        .kpi-title {
             font-size: 0.9rem;
             color: var(--cun-muted);
             font-weight: 600;
-        }}
+        }
 
-        .kpi-value {{
+        .kpi-value {
             font-size: 2.75rem;
             font-weight: 800;
             color: #FFFFFF;
             line-height: 1;
             margin-bottom: 0.5rem;
-        }}
+        }
 
-        .kpi-subtext {{
+        .kpi-subtext {
             font-size: 0.8rem;
             color: var(--cun-muted);
-        }}
+        }
 
         /* Section Title & Search */
-        .section-header {{
+        .section-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1.5rem;
             flex-wrap: wrap;
             gap: 1rem;
-        }}
+        }
 
-        .section-title {{
+        .section-title {
             font-size: 1.3rem;
             font-weight: 800;
             display: flex;
             align-items: center;
             gap: 10px;
-        }}
+        }
 
-        .search-box {{
+        .search-box {
             position: relative;
             min-width: 320px;
-        }}
+        }
 
-        .search-box input {{
+        .search-box input {
             width: 100%;
             background: rgba(15, 23, 42, 0.85);
             border: 1px solid var(--cun-border);
@@ -863,124 +402,124 @@ html_content = f"""<!DOCTYPE html>
             font-size: 0.9rem;
             outline: none;
             transition: all 0.3s ease;
-        }}
+        }
 
-        .search-box input:focus {{
+        .search-box input:focus {
             border-color: var(--cun-cyan);
             box-shadow: 0 0 15px rgba(0, 242, 254, 0.25);
-        }}
+        }
 
-        .search-box i {{
+        .search-box i {
             position: absolute;
             left: 1rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--cun-muted);
-        }}
+        }
 
         /* LAYOUT DIVIDIDO IZQUIERDA Y DERECHA POR ESCUELA */
-        .escuelas-grid-layout {{
+        .escuelas-grid-layout {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1.75rem;
-        }}
+        }
 
-        .escuelas-panel {{
+        .escuelas-panel {
             background: var(--cun-card-bg);
             backdrop-filter: blur(16px);
             border: 1px solid var(--cun-border);
             border-radius: 24px;
             padding: 1.5rem;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        }}
+        }
 
-        .panel-header {{
+        .panel-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding-bottom: 1rem;
             margin-bottom: 1rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }}
+        }
 
-        .panel-header h3 {{
+        .panel-header h3 {
             font-size: 1.1rem;
             font-weight: 700;
             color: var(--cun-green-glow);
             display: flex;
             align-items: center;
             gap: 10px;
-        }}
+        }
 
-        .panel-header span {{
+        .panel-header span {
             font-size: 0.8rem;
             color: var(--cun-muted);
             font-weight: 600;
-        }}
+        }
 
-        .escuelas-list {{
+        .escuelas-list {
             display: flex;
             flex-direction: column;
             gap: 1rem;
             max-height: 520px;
             overflow-y: auto;
             padding-right: 6px;
-        }}
+        }
 
         /* Item Panel Izquierdo: Totales por Escuela */
-        .escuela-card-left {{
+        .escuela-card-left {
             background: rgba(15, 23, 42, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             padding: 1.1rem;
             transition: all 0.2s ease;
-        }}
+        }
 
-        .escuela-card-left:hover {{
+        .escuela-card-left:hover {
             border-color: var(--cun-green);
             background: rgba(0, 168, 89, 0.08);
-        }}
+        }
 
-        .card-left-header {{
+        .card-left-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 8px;
-        }}
+        }
 
-        .card-left-title {{
+        .card-left-title {
             font-size: 0.95rem;
             font-weight: 700;
             color: #FFFFFF;
-        }}
+        }
 
-        .card-left-badge {{
+        .card-left-badge {
             background: linear-gradient(135deg, var(--cun-green), var(--cun-cyan));
             color: #050B14;
             font-weight: 800;
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 0.85rem;
-        }}
+        }
 
-        .progress-bar-bg {{
+        .progress-bar-bg {
             width: 100%;
             height: 8px;
             background: rgba(255, 255, 255, 0.1);
             border-radius: 20px;
             overflow: hidden;
             margin-top: 6px;
-        }}
+        }
 
-        .progress-bar-fill {{
+        .progress-bar-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--cun-green), var(--cun-cyan));
             border-radius: 20px;
             transition: width 1s ease;
-        }}
+        }
 
         /* Item Panel Derecho: Virtual vs Presencial por Escuela */
-        .escuela-card-right {{
+        .escuela-card-right {
             background: rgba(15, 23, 42, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
@@ -988,16 +527,16 @@ html_content = f"""<!DOCTYPE html>
             cursor: pointer;
             position: relative;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }}
+        }
 
-        .escuela-card-right:hover {{
+        .escuela-card-right:hover {
             border-color: var(--cun-cyan);
             background: rgba(0, 242, 254, 0.08);
             transform: scale(1.01);
             box-shadow: 0 8px 24px rgba(0, 242, 254, 0.15);
-        }}
+        }
 
-        .escuela-card-right::after {{
+        .escuela-card-right::after {
             content: "Ver sedes / origen ➔";
             position: absolute;
             top: 12px;
@@ -1006,57 +545,57 @@ html_content = f"""<!DOCTYPE html>
             color: var(--cun-cyan);
             opacity: 0.85;
             font-weight: 700;
-        }}
+        }
 
-        .card-right-header {{
+        .card-right-header {
             font-size: 0.95rem;
             font-weight: 700;
             color: #FFFFFF;
             margin-bottom: 10px;
             padding-right: 120px;
-        }}
+        }
 
-        .modalidad-breakdown {{
+        .modalidad-breakdown {
             display: flex;
             gap: 12px;
-        }}
+        }
 
-        .breakdown-box {{
+        .breakdown-box {
             flex: 1;
             padding: 8px 12px;
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-        }}
+        }
 
-        .box-presencial {{
+        .box-presencial {
             background: rgba(0, 255, 135, 0.12);
             border: 1px solid rgba(0, 255, 135, 0.3);
             color: var(--cun-green-glow);
-        }}
+        }
 
-        .box-virtual {{
+        .box-virtual {
             background: rgba(168, 85, 247, 0.12);
             border: 1px solid rgba(168, 85, 247, 0.3);
             color: #C084FC;
-        }}
+        }
 
-        .box-label {{
+        .box-label {
             font-size: 0.8rem;
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 6px;
-        }}
+        }
 
-        .box-value {{
+        .box-value {
             font-size: 1.1rem;
             font-weight: 800;
-        }}
+        }
 
         /* Modal Overlay */
-        .modal-overlay {{
+        .modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -1071,14 +610,14 @@ html_content = f"""<!DOCTYPE html>
             opacity: 0;
             pointer-events: none;
             transition: all 0.3s ease;
-        }}
+        }
 
-        .modal-overlay.active {{
+        .modal-overlay.active {
             opacity: 1;
             pointer-events: auto;
-        }}
+        }
 
-        .modal-content {{
+        .modal-content {
             background: #0A1426;
             border: 1px solid var(--cun-cyan);
             width: 92%;
@@ -1088,53 +627,53 @@ html_content = f"""<!DOCTYPE html>
             box-shadow: 0 0 60px rgba(0, 242, 254, 0.25);
             transform: scale(0.9);
             transition: transform 0.3s ease;
-        }}
+        }
 
-        .modal-overlay.active .modal-content {{
+        .modal-overlay.active .modal-content {
             transform: scale(1);
-        }}
+        }
 
-        .modal-header {{
+        .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             padding-bottom: 1rem;
-        }}
+        }
 
-        .modal-header h3 {{
+        .modal-header h3 {
             font-size: 1.3rem;
             color: var(--cun-cyan);
             display: flex;
             align-items: center;
             gap: 10px;
-        }}
+        }
 
-        .close-modal {{
+        .close-modal {
             background: none;
             border: none;
             color: var(--cun-muted);
             font-size: 1.25rem;
             cursor: pointer;
             transition: color 0.2s;
-        }}
+        }
 
-        .close-modal:hover {{
+        .close-modal:hover {
             color: #FFFFFF;
-        }}
+        }
 
         /* ESTILOS ESPECÍFICOS DEL MODAL DE LISTADO COMPLETO DE ASISTENTES */
-        .asistentes-modal-search-wrapper {{
+        .asistentes-modal-search-wrapper {
             margin-bottom: 1.25rem;
-        }}
+        }
 
-        .asistentes-modal-search {{
+        .asistentes-modal-search {
             position: relative;
             width: 100%;
-        }}
+        }
 
-        .asistentes-modal-search input {{
+        .asistentes-modal-search input {
             width: 100%;
             background: rgba(15, 23, 42, 0.95);
             border: 1px solid var(--cun-cyan);
@@ -1144,33 +683,33 @@ html_content = f"""<!DOCTYPE html>
             font-size: 0.95rem;
             outline: none;
             box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
-        }}
+        }
 
-        .asistentes-modal-search i {{
+        .asistentes-modal-search i {
             position: absolute;
             left: 1.1rem;
             top: 50%;
             transform: translateY(-50%);
             color: var(--cun-cyan);
             font-size: 1rem;
-        }}
+        }
 
-        .asistentes-table-container {{
+        .asistentes-table-container {
             max-height: 480px;
             overflow-y: auto;
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 16px;
             background: rgba(10, 20, 38, 0.6);
-        }}
+        }
 
-        .asistentes-table {{
+        .asistentes-table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
             font-size: 0.88rem;
-        }}
+        }
 
-        .asistentes-table th {{
+        .asistentes-table th {
             background: rgba(0, 168, 89, 0.25);
             color: var(--cun-green-glow);
             padding: 12px 16px;
@@ -1179,19 +718,19 @@ html_content = f"""<!DOCTYPE html>
             top: 0;
             z-index: 2;
             border-bottom: 1px solid var(--cun-border);
-        }}
+        }
 
-        .asistentes-table td {{
+        .asistentes-table td {
             padding: 12px 16px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             color: var(--cun-text);
-        }}
+        }
 
-        .asistentes-table tr:hover {{
+        .asistentes-table tr:hover {
             background: rgba(0, 242, 254, 0.08);
-        }}
+        }
 
-        .badge-mod-presencial {{
+        .badge-mod-presencial {
             background: rgba(0, 255, 135, 0.15);
             color: var(--cun-green-glow);
             border: 1px solid rgba(0, 255, 135, 0.3);
@@ -1200,9 +739,9 @@ html_content = f"""<!DOCTYPE html>
             font-weight: 700;
             font-size: 0.78rem;
             display: inline-block;
-        }}
+        }
 
-        .badge-mod-virtual {{
+        .badge-mod-virtual {
             background: rgba(168, 85, 247, 0.15);
             color: #C084FC;
             border: 1px solid rgba(168, 85, 247, 0.3);
@@ -1211,18 +750,18 @@ html_content = f"""<!DOCTYPE html>
             font-weight: 700;
             font-size: 0.78rem;
             display: inline-block;
-        }}
+        }
 
-        .regional-list {{
+        .regional-list {
             display: flex;
             flex-direction: column;
             gap: 1rem;
             max-height: 420px;
             overflow-y: auto;
             padding-right: 8px;
-        }}
+        }
 
-        .regional-card {{
+        .regional-card {
             background: rgba(15, 23, 42, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.08);
             padding: 1rem 1.25rem;
@@ -1230,27 +769,27 @@ html_content = f"""<!DOCTYPE html>
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }}
+        }
 
-        .regional-name {{
+        .regional-name {
             font-weight: 700;
             font-size: 0.95rem;
             color: #FFFFFF;
             display: flex;
             align-items: center;
             gap: 8px;
-        }}
+        }
 
-        .regional-badge {{
+        .regional-badge {
             background: linear-gradient(135deg, var(--cun-green), var(--cun-cyan));
             color: #050B14;
             font-weight: 800;
             padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.9rem;
-        }}
+        }
 
-        .modal-sub-section {{
+        .modal-sub-section {
             margin-top: 1rem;
             margin-bottom: 0.5rem;
             font-size: 0.85rem;
@@ -1258,13 +797,13 @@ html_content = f"""<!DOCTYPE html>
             color: var(--cun-muted);
             text-transform: uppercase;
             letter-spacing: 0.5px;
-        }}
+        }
 
-        @media (max-width: 992px) {{
-            .escuelas-grid-layout, .kpi-subgrid {{
+        @media (max-width: 992px) {
+            .escuelas-grid-layout, .kpi-subgrid {
                 grid-template-columns: 1fr;
-            }}
-        }}
+            }
+        }
     </style>
 </head>
 <body>
@@ -1288,7 +827,7 @@ html_content = f"""<!DOCTYPE html>
                     <div class="live-dot"></div>
                     <div class="live-info">
                         <span class="live-title">ÚLTIMA ACTUALIZACIÓN:</span>
-                        <span class="live-date">{fecha_actualizacion}</span>
+                        <span class="live-date">30/07/2026 02:10 PM</span>
                     </div>
                 </div>
             </div>
@@ -1299,15 +838,15 @@ html_content = f"""<!DOCTYPE html>
             <div class="hero-header">
                 <div class="hero-info">
                     <span class="kpi-title">TOTAL REGISTROS</span>
-                    <div class="kpi-value" id="kpi-total">{total_registros}</div>
+                    <div class="kpi-value" id="kpi-total">35</div>
                     <div class="kpi-subtext">..</div>
                 </div>
                 <div class="kpi-icon icon-total"><i class="fa-solid fa-users"></i></div>
             </div>
             <div class="hero-progress-wrapper">
                 <div class="hero-progress-meta">
-                    <span>PORCENTAJE DE ASISTENCIA EVENTO ({total_registros} / {total_planta} FACILITADORES)</span>
-                    <span class="highlight">{pct_asistencia_global}%</span>
+                    <span>PORCENTAJE DE ASISTENCIA EVENTO (35 / 1188 FACILITADORES)</span>
+                    <span class="highlight">2.9%</span>
                 </div>
                 <div class="hero-progress-bg">
                     <div class="hero-progress-fill"></div>
@@ -1322,7 +861,7 @@ html_content = f"""<!DOCTYPE html>
                     <span class="kpi-title">ASISTENCIA PRESENCIAL</span>
                     <div class="kpi-icon icon-presencial"><i class="fa-solid fa-building-user"></i></div>
                 </div>
-                <div class="kpi-value" style="color: var(--cun-green-glow);">{presencial_count}</div>
+                <div class="kpi-value" style="color: var(--cun-green-glow);">26</div>
                 <div class="kpi-subtext">...</div>
             </div>
 
@@ -1331,7 +870,7 @@ html_content = f"""<!DOCTYPE html>
                     <span class="kpi-title">ASISTENCIA VIRTUAL</span>
                     <div class="kpi-icon icon-virtual"><i class="fa-solid fa-laptop-code"></i></div>
                 </div>
-                <div class="kpi-value" style="color: #C084FC;">{virtual_count}</div>
+                <div class="kpi-value" style="color: #C084FC;">9</div>
                 <div class="kpi-subtext">...</div>
             </div>
         </div>
@@ -1353,7 +892,7 @@ html_content = f"""<!DOCTYPE html>
             <div class="escuelas-panel">
                 <div class="panel-header">
                     <h3><i class="fa-solid fa-school"></i> Total por Escuela</h3>
-                    <span>Clic para ver Centros de Costo (Col. I)</span>
+                    <span>Clic para ver Centros de Costo</span>
                 </div>
                 <div class="escuelas-list" id="escuelas-totales-list">
                 </div>
@@ -1375,7 +914,7 @@ html_content = f"""<!DOCTYPE html>
     <div class="modal-overlay" id="modal-asistentes-completos">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-address-book" style="color: var(--cun-cyan);"></i> Listado Completo de Registros (<span id="asistentes-counter">{total_registros}</span>)</h3>
+                <h3><i class="fa-solid fa-address-book" style="color: var(--cun-cyan);"></i> Listado Completo de Registros (<span id="asistentes-counter">35</span>)</h3>
                 <button class="close-modal" id="close-asistentes-modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
@@ -1440,7 +979,7 @@ html_content = f"""<!DOCTYPE html>
                 <button class="close-modal" id="close-centros-costo-modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div style="margin-bottom: 1.25rem; color: var(--cun-muted); font-size: 0.88rem; font-weight: 600;">
-                Desglose de registros correspondientes a la <strong style="color: var(--cun-cyan);">Columna I (Nombre Centro Costo)</strong> para esta escuela:
+                Desglose de  <strong style="color: var(--cun-cyan);">centro de costos </strong> por escuelas:
             </div>
             <div class="regional-list" id="centros-costo-modal-body">
             </div>
@@ -1448,9 +987,9 @@ html_content = f"""<!DOCTYPE html>
     </div>
 
     <script>
-        const escuelasData = {json.dumps(escuelas_data, ensure_ascii=False)};
-        const regionalPresencialData = {json.dumps(regional_presencial_dict, ensure_ascii=False)};
-        const asistentesData = {json.dumps(asistentes_data, ensure_ascii=False)};
+        const escuelasData = [{"escuela": "BELLAS ARTES", "total": 11, "presencial": 9, "virtual": 2, "porcentaje": 31.4, "regiones_presencial": {"REGIONAL BOGOTA": 6, "REGIONAL TOLIMA": 2, "REGIONAL SUCRE": 1}, "regiones_virtual": {"REGIONAL MAGDALENA": 2}, "sedes": {"BOGOTA CENTRO": 6, "SANTA MARTA": 2, "IBAGUE": 2, "SINCELEJO": 1}, "centros_costo": {"DISENO GRAFICO": 5, "DISENO Y PRODUCCION DE MODAS": 2, "COMUNICACION SOCIAL Y PERIODISMO": 2, "MARKETING DIGITAL": 1, "DIRECCION Y PRODUCCION DE MEDIOS AUDIOVISUALES": 1}}, {"escuela": "TRANSVERSALES", "total": 10, "presencial": 7, "virtual": 3, "porcentaje": 28.6, "regiones_presencial": {"REGIONAL BOGOTA": 5, "REGIONAL SUCRE": 1, "REGIONAL ATLANTICO": 1}, "regiones_virtual": {"REGIONAL QUINDIO": 1, "REGIONAL SANTANDER": 1, "REGIONAL MAGDALENA": 1}, "sedes": {"BOGOTA CENTRO": 5, "ARMENIA": 1, "BUCARAMANGA": 1, "SANTA MARTA": 1, "SINCELEJO": 1, "BARRANQUILLA": 1}, "centros_costo": {"EMPRENDIMIENTO": 6, "IDIOMAS": 2, "CIENCIAS BASICAS": 2}}, {"escuela": "INVESTIGACIONES", "total": 8, "presencial": 6, "virtual": 2, "porcentaje": 22.9, "regiones_presencial": {"REGIONAL BOGOTA": 6}, "regiones_virtual": {"REGIONAL BOYACA": 1, "REGIONAL SANTANDER": 1}, "sedes": {"BOGOTA CENTRO": 5, "TUNJA": 1, "BOGOTA NORTE": 1, "BUCARAMANGA": 1}, "centros_costo": {"INVESTIGACIONES": 8}}, {"escuela": "NEGOCIOS", "total": 3, "presencial": 2, "virtual": 1, "porcentaje": 8.6, "regiones_presencial": {"REGIONAL BOGOTA": 1, "REGIONAL CORDOBA": 1}, "regiones_virtual": {"REGIONAL NARINO": 1}, "sedes": {"BOGOTA CENTRO": 1, "MONTERIA": 1, "IPIALES": 1}, "centros_costo": {"CONTADURIA PUBLICA": 2, "PUBLICIDAD Y MERCADEO": 1}}, {"escuela": "ESPECIALIZACIONES", "total": 2, "presencial": 2, "virtual": 0, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL BOGOTA": 2}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 2}, "centros_costo": {"ESPECIALIZACION EN PROSPECTIVA ESTRATEGICA": 1, "ESPECIALIZACION EN SEGURIDAD Y SALUD EN EL TRABAJO": 1}}, {"escuela": "", "total": 1, "presencial": 0, "virtual": 1, "porcentaje": 2.9, "regiones_presencial": {}, "regiones_virtual": {"REGIONAL MAGDALENA": 1}, "sedes": {"SANTA MARTA": 1}, "centros_costo": {"DISENO GRAFICO": 1}}];
+        const regionalPresencialData = {"REGIONAL BOGOTA": 20, "REGIONAL SUCRE": 2, "REGIONAL TOLIMA": 2, "REGIONAL CORDOBA": 1, "REGIONAL ATLANTICO": 1};
+        const asistentesData = [{"cedula": "79218737", "nombre": "OSCAR JAVIER MORENO MARTINEZ", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL QUINDIO", "sede": "ARMENIA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/PROYECCION", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "53133811", "nombre": "DIANA CAROLINA POLO RAMOS", "escuela": "", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1083001191", "nombre": "LADY MARIANE FONTALVO TOLOSA", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1005570324", "nombre": "DANIELA ANDREA MARTINEZ ESPANA", "escuela": "BELLAS ARTES", "centro_costo": "MARKETING DIGITAL", "regional": "REGIONAL SUCRE", "sede": "SINCELEJO", "cargo": "DOC AUX T&T/N/MT/MAR DIG", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "1032451810", "nombre": "SERGIO IVAN ALBARRACIN SANCHEZ", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1098750510", "nombre": "NELLY JOHANA ALVAREZ IDARRAGA", "escuela": "TRANSVERSALES", "centro_costo": "IDIOMAS", "regional": "REGIONAL SANTANDER", "sede": "BUCARAMANGA", "cargo": "DOC ASIS/N/V/TC/IDIOMAS/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "80099466", "nombre": "ALBYN FABIAN LEON BAQUERO", "escuela": "NEGOCIOS", "centro_costo": "PUBLICIDAD Y MERCADEO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC TITULAR/N/V/MT/PUB Y MERC", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "80186209", "nombre": "MICHEL FEDERICO BUSTOS ROMERO", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/INVESTIGACIONES/INVESTIG", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "52412273", "nombre": "MELVY CRISTIANI RIVERA", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/TC/EMPRENDIMIENTO/PROYECTOS A", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1020752802", "nombre": "CRISTOBAL GOMEZ REINA", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "78024830", "nombre": "EMERSON MANUEL CASTANO PATERNINA", "escuela": "NEGOCIOS", "centro_costo": "CONTADURIA PUBLICA", "regional": "REGIONAL CORDOBA", "sede": "MONTERIA", "cargo": "DOCENTE ASIS/N/TC/CONT PUBL/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "7175280", "nombre": "JULIO CESAR PACHON EUGENIO", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOYACA", "sede": "TUNJA", "cargo": "DOC AUX/N/V/TC/INVESTIGACIONES/INVESTIGACI", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1032363391", "nombre": "JENNY ROCIO HERNANDEZ FLOREZ", "escuela": "BELLAS ARTES", "centro_costo": "DISENO Y PRODUCCION DE MODAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/DIS PROD MOD/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "79955605", "nombre": "RAFAEL FRANCISCO DIAZ VASQUEZ", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA NORTE", "cargo": "DOC AUX T&T/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1019066088", "nombre": "DIEGO FERNANDO DELGADO CUELLAR", "escuela": "BELLAS ARTES", "centro_costo": "DIRECCION Y PRODUCCION DE MEDIOS AUDIOVISUALES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/V/TC/DIR PROD ME AUD/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1013591700", "nombre": "JOHNY ANDRES JARAMILLO PALACIO", "escuela": "TRANSVERSALES", "centro_costo": "CIENCIAS BASICAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/CIENCIAS BASI/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "53044000", "nombre": "KELLY JOHANNA SIERRA RODRIGUEZ", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1020788193", "nombre": "DANIEL FELIPE BELTRAN JIMENEZ", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1085920254", "nombre": "JANETH CRISTINA MENDEZ ROSERO", "escuela": "NEGOCIOS", "centro_costo": "CONTADURIA PUBLICA", "regional": "REGIONAL NARINO", "sede": "IPIALES", "cargo": "DOC AUX/N/V/MT/CONTADURIA", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1032415074", "nombre": "GIOVANNY ROBLEDO VILLANUEVA", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "80882570", "nombre": "ANDRES ALBERTO GARRIDO TORRES", "escuela": "TRANSVERSALES", "centro_costo": "IDIOMAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/IDIOMAS/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "52365713", "nombre": "ERIKA ROCIO ROMERO ORJUELA", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1010229459", "nombre": "JUAN CAMILO BOHORQUEZ VIVAS", "escuela": "BELLAS ARTES", "centro_costo": "COMUNICACION SOCIAL Y PERIODISMO", "regional": "REGIONAL TOLIMA", "sede": "IBAGUE", "cargo": "DOCENTE ASIS/N/TC/COM SOC Y PER/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "1082931770", "nombre": "JUAN LUIS CAMARGO GRANADOS", "escuela": "BELLAS ARTES", "centro_costo": "COMUNICACION SOCIAL Y PERIODISMO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/COM SOC Y PER/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1121835674", "nombre": "JHON ARLEY PARRADO ARENAS", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL TOLIMA", "sede": "IBAGUE", "cargo": "DOCENTE AUX/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "60364287", "nombre": "ALEJANDRINA RINCON ACEVEDO", "escuela": "BELLAS ARTES", "centro_costo": "DISENO Y PRODUCCION DE MODAS", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS PROD MOD/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "7630409", "nombre": "JOSE RAFAEL DAVILA FERNANDEZ", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1075667294", "nombre": "CHRISTIAN DAVID RAMIREZ RUBIANO", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/INVESTIGA/INVESTIGACION", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "65786864", "nombre": "YAMILE MEDINA CASTANEDA", "escuela": "TRANSVERSALES", "centro_costo": "CIENCIAS BASICAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/CIEN BASI/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1102860563", "nombre": "RAFAEL EDUARDO PATERNINA DIAZ", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL SUCRE", "sede": "SINCELEJO", "cargo": "DOC ASIS/N/V/TC/EMPRENDIMIENTO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "52542490", "nombre": "CAROLL ALEAN MAHECHA", "escuela": "ESPECIALIZACIONES", "centro_costo": "ESPECIALIZACION EN PROSPECTIVA ESTRATEGICA", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/ESP PROSP ESTR/PROYECC", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1013587134", "nombre": "CLAUDIA MILENA OSPINA LOPEZ", "escuela": "ESPECIALIZACIONES", "centro_costo": "ESPECIALIZACION EN SEGURIDAD Y SALUD EN EL TRABAJO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/ESP SEG SALUD TRAB/FUN.A", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "8642585", "nombre": "JUAN CARLOS HERRERA ESTRADA", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX/N/V/TC/INVESTIGACIONES/INVESTIGACI", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1140863887", "nombre": "NICOLE NATHALY ARROYO SANCHEZ", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL ATLANTICO", "sede": "BARRANQUILLA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "88209112", "nombre": "WILSON BONILLA PABON", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL SANTANDER", "sede": "BUCARAMANGA", "cargo": "DOC TITULAR/N/V/TC/INVESTIGACIONES/INVESTI", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}];
 
         const escuelasTotalesContainer = document.getElementById('escuelas-totales-list');
         const escuelasModalidadesContainer = document.getElementById('escuelas-modalidades-list');
@@ -1464,7 +1003,7 @@ html_content = f"""<!DOCTYPE html>
         const asistentesTableBody = document.getElementById('asistentes-table-body');
         const asistentesCounter = document.getElementById('asistentes-counter');
 
-        function renderAsistentesModal(filterText = '') {{
+        function renderAsistentesModal(filterText = '') {
             asistentesTableBody.innerHTML = '';
             const query = filterText ? String(filterText).toLowerCase().trim() : '';
             
@@ -1477,67 +1016,67 @@ html_content = f"""<!DOCTYPE html>
                 (a.modalidad && a.modalidad.toLowerCase().includes(query))
             );
 
-            asistentesCounter.innerText = `${{filtered.length}} / ${{asistentesData.length}}`;
+            asistentesCounter.innerText = `${filtered.length} / ${asistentesData.length}`;
 
-            if (filtered.length === 0) {{
+            if (filtered.length === 0) {
                 asistentesTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--cun-muted);">No se encontraron asistentes con ese criterio de búsqueda</td></tr>';
                 return;
-            }}
+            }
 
-            filtered.forEach(item => {{
+            filtered.forEach(item => {
                 const tr = document.createElement('tr');
                 const badgeClass = item.modalidad === 'PRESENCIAL' ? 'badge-mod-presencial' : 'badge-mod-virtual';
                 tr.innerHTML = `
-                    <td style="font-weight:700; font-family:monospace; color:var(--cun-cyan);">${{item.cedula}}</td>
-                    <td style="font-weight:700; color:#FFFFFF;">${{item.nombre}}</td>
-                    <td><span style="background:rgba(0,168,89,0.18); color:var(--cun-green-glow); border:1px solid rgba(0,255,135,0.3); padding:3px 8px; border-radius:8px; font-weight:700; font-size:0.78rem;">${{item.escuela}}</span></td>
-                    <td style="color:var(--cun-muted);">${{item.centro_costo}}</td>
-                    <td>${{item.regional}}</td>
-                    <td style="color:var(--cun-muted);">${{item.sede}}</td>
-                    <td><span class="${{badgeClass}}">${{item.modalidad}}</span></td>
+                    <td style="font-weight:700; font-family:monospace; color:var(--cun-cyan);">${item.cedula}</td>
+                    <td style="font-weight:700; color:#FFFFFF;">${item.nombre}</td>
+                    <td><span style="background:rgba(0,168,89,0.18); color:var(--cun-green-glow); border:1px solid rgba(0,255,135,0.3); padding:3px 8px; border-radius:8px; font-weight:700; font-size:0.78rem;">${item.escuela}</span></td>
+                    <td style="color:var(--cun-muted);">${item.centro_costo}</td>
+                    <td>${item.regional}</td>
+                    <td style="color:var(--cun-muted);">${item.sede}</td>
+                    <td><span class="${badgeClass}">${item.modalidad}</span></td>
                 `;
                 asistentesTableBody.appendChild(tr);
-            }});
-        }}
+            });
+        }
 
-        btnTotalAsistentes.addEventListener('click', () => {{
+        btnTotalAsistentes.addEventListener('click', () => {
             asistentesModalInput.value = '';
             renderAsistentesModal();
             modalAsistentesCompletos.classList.add('active');
-            setTimeout(() => {{
+            setTimeout(() => {
                 asistentesModalInput.focus();
-            }}, 100);
-        }});
+            }, 100);
+        });
 
-        closeAsistentesModalBtn.addEventListener('click', () => {{
+        closeAsistentesModalBtn.addEventListener('click', () => {
             modalAsistentesCompletos.classList.remove('active');
-        }});
+        });
 
-        modalAsistentesCompletos.addEventListener('click', (e) => {{
-            if (e.target === modalAsistentesCompletos) {{
+        modalAsistentesCompletos.addEventListener('click', (e) => {
+            if (e.target === modalAsistentesCompletos) {
                 modalAsistentesCompletos.classList.remove('active');
-            }}
-        }});
+            }
+        });
 
-        asistentesModalInput.addEventListener('input', (e) => {{
+        asistentesModalInput.addEventListener('input', (e) => {
             renderAsistentesModal(e.target.value);
-        }});
+        });
 
-        // Modal Detalle Centros de Costo (Columna I) por Escuela
+        // Modal Detalle Centros de Costo por Escuela
         const modalCentrosCosto = document.getElementById('modal-escuela-centros-costo');
         const centrosCostoModalTitle = document.getElementById('centros-costo-modal-title');
         const centrosCostoModalBody = document.getElementById('centros-costo-modal-body');
         const closeCentrosCostoModalBtn = document.getElementById('close-centros-costo-modal');
 
-        function openEscuelaCentrosCostoModal(item) {{
-            centrosCostoModalTitle.innerHTML = `<i class="fa-solid fa-folder-tree" style="color: var(--cun-green-glow);"></i> Centros de Costo (Columna I): ${{item.escuela}}`;
+        function openEscuelaCentrosCostoModal(item) {
+            centrosCostoModalTitle.innerHTML = `<i class="fa-solid fa-folder-tree" style="color: var(--cun-green-glow);"></i> Centros de Costo: ${item.escuela}`;
             centrosCostoModalBody.innerHTML = '';
 
-            const ccKeys = Object.keys(item.centros_costo || {{}});
-            if (ccKeys.length === 0) {{
+            const ccKeys = Object.keys(item.centros_costo || {});
+            if (ccKeys.length === 0) {
                 centrosCostoModalBody.innerHTML = '<div style="text-align:center; color:var(--cun-muted); padding:2rem;">No hay centros de costo registrados para esta escuela</div>';
-            }} else {{
-                ccKeys.forEach(cc => {{
+            } else {
+                ccKeys.forEach(cc => {
                     const count = item.centros_costo[cc];
                     const pct = item.total > 0 ? ((count / item.total) * 100).toFixed(1) : 0;
                     const card = document.createElement('div');
@@ -1546,27 +1085,27 @@ html_content = f"""<!DOCTYPE html>
                     card.style.border = '1px solid var(--cun-border)';
                     card.innerHTML = `
                         <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
-                            <span class="regional-name" style="font-size:0.92rem; color:#FFFFFF;"><i class="fa-solid fa-bookmark" style="color:var(--cun-cyan);"></i> ${{cc}}</span>
-                            <span style="font-size:0.75rem; color:var(--cun-muted);">${{pct}}% del total de la escuela (${{count}} de ${{item.total}})</span>
+                            <span class="regional-name" style="font-size:0.92rem; color:#FFFFFF;"><i class="fa-solid fa-bookmark" style="color:var(--cun-cyan);"></i> ${cc}</span>
+                            <span style="font-size:0.75rem; color:var(--cun-muted);">${pct}% del total de la escuela (${count} de ${item.total})</span>
                         </div>
-                        <span class="regional-badge" style="background: linear-gradient(135deg, var(--cun-green), var(--cun-cyan)); color: #050B14; font-weight: 800;">${{count}} Facilitadores</span>
+                        <span class="regional-badge" style="background: linear-gradient(135deg, var(--cun-green), var(--cun-cyan)); color: #050B14; font-weight: 800;">${count} Facilitadores</span>
                     `;
                     centrosCostoModalBody.appendChild(card);
-                }});
-            }}
+                });
+            }
 
             modalCentrosCosto.classList.add('active');
-        }}
+        }
 
-        closeCentrosCostoModalBtn.addEventListener('click', () => {{
+        closeCentrosCostoModalBtn.addEventListener('click', () => {
             modalCentrosCosto.classList.remove('active');
-        }});
+        });
 
-        modalCentrosCosto.addEventListener('click', (e) => {{
-            if (e.target === modalCentrosCosto) {{
+        modalCentrosCosto.addEventListener('click', (e) => {
+            if (e.target === modalCentrosCosto) {
                 modalCentrosCosto.classList.remove('active');
-            }}
-        }});
+            }
+        });
 
         // Modal Detalle Escuela
         const modalEscuelaDetalle = document.getElementById('modal-escuela-detalle');
@@ -1574,207 +1113,207 @@ html_content = f"""<!DOCTYPE html>
         const escuelaModalBody = document.getElementById('escuela-modal-body');
         const closeEscuelaModalBtn = document.getElementById('close-escuela-modal');
 
-        function openEscuelaRegionalModal(item) {{
-            escuelaModalTitle.innerHTML = `<i class="fa-solid fa-city"></i> Origen Regional: ${{item.escuela}}`;
+        function openEscuelaRegionalModal(item) {
+            escuelaModalTitle.innerHTML = `<i class="fa-solid fa-city"></i> Origen Regional: ${item.escuela}`;
             escuelaModalBody.innerHTML = '';
 
             let hasData = false;
 
             // Sub-sección 1: Regiones Presenciales
-            const presKeys = Object.keys(item.regiones_presencial || {{}});
-            if (presKeys.length > 0) {{
+            const presKeys = Object.keys(item.regiones_presencial || {});
+            if (presKeys.length > 0) {
                 hasData = true;
                 const titleP = document.createElement('div');
                 titleP.className = 'modal-sub-section';
-                titleP.innerHTML = `<i class="fa-solid fa-location-dot" style="color: var(--cun-green-glow);"></i> Asistentes Presenciales por Región (${{item.presencial}})`;
+                titleP.innerHTML = `<i class="fa-solid fa-location-dot" style="color: var(--cun-green-glow);"></i> Asistentes Presenciales por Región (${item.presencial})`;
                 escuelaModalBody.appendChild(titleP);
 
-                presKeys.forEach(reg => {{
+                presKeys.forEach(reg => {
                     const card = document.createElement('div');
                     card.className = 'regional-card';
                     card.innerHTML = `
-                        <span class="regional-name"><i class="fa-solid fa-building-flag" style="color: var(--cun-green-glow);"></i> ${{reg}}</span>
-                        <span class="regional-badge">${{item.regiones_presencial[reg]}} Facilitadores</span>
+                        <span class="regional-name"><i class="fa-solid fa-building-flag" style="color: var(--cun-green-glow);"></i> ${reg}</span>
+                        <span class="regional-badge">${item.regiones_presencial[reg]} Facilitadores</span>
                     `;
                     escuelaModalBody.appendChild(card);
-                }});
-            }}
+                });
+            }
 
             // Sub-sección 2: Regiones Virtuales
-            const virtKeys = Object.keys(item.regiones_virtual || {{}});
-            if (virtKeys.length > 0) {{
+            const virtKeys = Object.keys(item.regiones_virtual || {});
+            if (virtKeys.length > 0) {
                 hasData = true;
                 const titleV = document.createElement('div');
                 titleV.className = 'modal-sub-section';
                 titleV.style.marginTop = '1.25rem';
-                titleV.innerHTML = `<i class="fa-solid fa-globe" style="color: #C084FC;"></i> Conexiones Virtuales por Región (${{item.virtual}})`;
+                titleV.innerHTML = `<i class="fa-solid fa-globe" style="color: #C084FC;"></i> Conexiones Virtuales por Región (${item.virtual})`;
                 escuelaModalBody.appendChild(titleV);
 
-                virtKeys.forEach(reg => {{
+                virtKeys.forEach(reg => {
                     const card = document.createElement('div');
                     card.className = 'regional-card';
                     card.innerHTML = `
-                        <span class="regional-name"><i class="fa-solid fa-laptop" style="color: #C084FC;"></i> ${{reg}}</span>
-                        <span class="regional-badge" style="background: linear-gradient(135deg, #A855F7, #00F2FE);">${{item.regiones_virtual[reg]}} Facilitadores</span>
+                        <span class="regional-name"><i class="fa-solid fa-laptop" style="color: #C084FC;"></i> ${reg}</span>
+                        <span class="regional-badge" style="background: linear-gradient(135deg, #A855F7, #00F2FE);">${item.regiones_virtual[reg]} Facilitadores</span>
                     `;
                     escuelaModalBody.appendChild(card);
-                }});
-            }}
+                });
+            }
 
             // Sub-sección 3: Detalle por Sedes
-            const sedesKeys = Object.keys(item.sedes || {{}});
-            if (sedesKeys.length > 0) {{
+            const sedesKeys = Object.keys(item.sedes || {});
+            if (sedesKeys.length > 0) {
                 const titleS = document.createElement('div');
                 titleS.className = 'modal-sub-section';
                 titleS.style.marginTop = '1.25rem';
                 titleS.innerHTML = `<i class="fa-solid fa-landmark"></i> Detalle por Sedes Ubicación`;
                 escuelaModalBody.appendChild(titleS);
 
-                sedesKeys.forEach(s => {{
+                sedesKeys.forEach(s => {
                     const card = document.createElement('div');
                     card.className = 'regional-card';
                     card.style.background = 'rgba(255,255,255,0.03)';
                     card.innerHTML = `
-                        <span class="regional-name" style="font-size:0.88rem;"><i class="fa-solid fa-door-open" style="color: var(--cun-cyan);"></i> ${{s}}</span>
-                        <span style="font-size:0.85rem; font-weight:700; color:var(--cun-muted);">${{item.sedes[s]}} Registros</span>
+                        <span class="regional-name" style="font-size:0.88rem;"><i class="fa-solid fa-door-open" style="color: var(--cun-cyan);"></i> ${s}</span>
+                        <span style="font-size:0.85rem; font-weight:700; color:var(--cun-muted);">${item.sedes[s]} Registros</span>
                     `;
                     escuelaModalBody.appendChild(card);
-                }});
-            }}
+                });
+            }
 
-            if (!hasData) {{
+            if (!hasData) {
                 escuelaModalBody.innerHTML = '<div style="text-align:center; color:var(--cun-muted); padding:2rem;">No hay desglose regional registrado para esta escuela</div>';
-            }}
+            }
 
             modalEscuelaDetalle.classList.add('active');
-        }}
+        }
 
-        closeEscuelaModalBtn.addEventListener('click', () => {{
+        closeEscuelaModalBtn.addEventListener('click', () => {
             modalEscuelaDetalle.classList.remove('active');
-        }});
+        });
 
-        modalEscuelaDetalle.addEventListener('click', (e) => {{
-            if (e.target === modalEscuelaDetalle) {{
+        modalEscuelaDetalle.addEventListener('click', (e) => {
+            if (e.target === modalEscuelaDetalle) {
                 modalEscuelaDetalle.classList.remove('active');
-            }}
-        }});
+            }
+        });
 
-        function renderEscuelas(filterText = '') {{
+        function renderEscuelas(filterText = '') {
             escuelasTotalesContainer.innerHTML = '';
             escuelasModalidadesContainer.innerHTML = '';
 
             const filtered = escuelasData.filter(e => e.escuela.toLowerCase().includes(filterText.toLowerCase()));
 
-            if (filtered.length === 0) {{
+            if (filtered.length === 0) {
                 const emptyMsg = '<div style="text-align: center; padding: 2rem; color: var(--cun-muted);">No hay coincidencias en la asistencia</div>';
                 escuelasTotalesContainer.innerHTML = emptyMsg;
                 escuelasModalidadesContainer.innerHTML = emptyMsg;
                 return;
-            }}
+            }
 
-            filtered.forEach(item => {{
+            filtered.forEach(item => {
                 // Card Columna Izquierda: Total por Escuela (Clic para emergente Columna I)
                 const cardLeft = document.createElement('div');
                 cardLeft.className = 'escuela-card-left';
                 cardLeft.style.cursor = 'pointer';
                 cardLeft.innerHTML = `
                     <div class="card-left-header">
-                        <span class="card-left-title">${{item.escuela}}</span>
-                        <span class="card-left-badge">${{item.total}} Total</span>
+                        <span class="card-left-title">${item.escuela}</span>
+                        <span class="card-left-badge">${item.total} Total</span>
                     </div>
                     <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" style="width: ${{item.porcentaje}}%;"></div>
+                        <div class="progress-bar-fill" style="width: ${item.porcentaje}%;"></div>
                     </div>
                     <div style="font-size:0.75rem; color: var(--cun-cyan); margin-top:8px; font-weight:700; display:flex; align-items:center; justify-content:space-between;">
-                        <span><i class="fa-solid fa-list-check"></i> Clic para ver Centros de Costo (Col. I)</span>
+                        <span><i class="fa-solid fa-list-check"></i> Clic para ver Centros de Costo </span>
                         <i class="fa-solid fa-chevron-right"></i>
                     </div>
                 `;
-                cardLeft.addEventListener('click', () => {{
+                cardLeft.addEventListener('click', () => {
                     openEscuelaCentrosCostoModal(item);
-                }});
+                });
                 escuelasTotalesContainer.appendChild(cardLeft);
 
                 // Card Columna Derecha: Conteo Virtual vs Presencial por Escuela
                 const cardRight = document.createElement('div');
                 cardRight.className = 'escuela-card-right';
                 cardRight.innerHTML = `
-                    <div class="card-right-header">${{item.escuela}}</div>
+                    <div class="card-right-header">${item.escuela}</div>
                     <div class="modalidad-breakdown">
                         <div class="breakdown-box box-presencial">
                             <span class="box-label"><i class="fa-solid fa-location-dot"></i> Presenciales</span>
-                            <span class="box-value">${{item.presencial}}</span>
+                            <span class="box-value">${item.presencial}</span>
                         </div>
                         <div class="breakdown-box box-virtual">
                             <span class="box-label"><i class="fa-solid fa-globe"></i> Virtuales</span>
-                            <span class="box-value">${{item.virtual}}</span>
+                            <span class="box-value">${item.virtual}</span>
                         </div>
                     </div>
                 `;
 
-                cardRight.addEventListener('click', () => {{
+                cardRight.addEventListener('click', () => {
                     openEscuelaRegionalModal(item);
-                }});
+                });
 
                 escuelasModalidadesContainer.appendChild(cardRight);
-            }});
-        }}
+            });
+        }
 
         renderEscuelas();
 
-        searchInput.addEventListener('input', (e) => {{
+        searchInput.addEventListener('input', (e) => {
             renderEscuelas(e.target.value);
-        }});
+        });
 
         const modalOverlay = document.getElementById('modal-presencial');
         const btnPresencial = document.getElementById('btn-presencial');
         const btnCloseModal = document.getElementById('close-modal');
         const regionalListContent = document.getElementById('regional-list-content');
 
-        btnPresencial.addEventListener('click', () => {{
+        btnPresencial.addEventListener('click', () => {
             regionalListContent.innerHTML = '';
             const keys = Object.keys(regionalPresencialData);
-            if (keys.length === 0) {{
+            if (keys.length === 0) {
                 regionalListContent.innerHTML = '<div style="text-align:center; color:var(--cun-muted); padding: 1.5rem;">No hay registros presenciales válidos asignados a regiones</div>';
-            }} else {{
-                keys.forEach(reg => {{
+            } else {
+                keys.forEach(reg => {
                     const card = document.createElement('div');
                     card.className = 'regional-card';
                     card.innerHTML = `
-                        <span class="regional-name"><i class="fa-solid fa-building-flag" style="color:var(--cun-green-glow);"></i> ${{reg}}</span>
-                        <span class="regional-badge">${{regionalPresencialData[reg]}} Facilitadores</span>
+                        <span class="regional-name"><i class="fa-solid fa-building-flag" style="color:var(--cun-green-glow);"></i> ${reg}</span>
+                        <span class="regional-badge">${regionalPresencialData[reg]} Facilitadores</span>
                     `;
                     regionalListContent.appendChild(card);
-                }});
-            }}
+                });
+            }
             modalOverlay.classList.add('active');
-        }});
+        });
 
-        btnCloseModal.addEventListener('click', () => {{
+        btnCloseModal.addEventListener('click', () => {
             modalOverlay.classList.remove('active');
-        }});
+        });
 
-        modalOverlay.addEventListener('click', (e) => {{
-            if (e.target === modalOverlay) {{
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
                 modalOverlay.classList.remove('active');
-            }}
-        }});
+            }
+        });
 
         const canvas = document.getElementById('galaxy-canvas');
         const ctx = canvas.getContext('2d');
 
-        function resizeCanvas() {{
+        function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-        }}
+        }
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
         const stars = [];
         const numStars = 180;
 
-        for (let i = 0; i < numStars; i++) {{
-            stars.push({{
+        for (let i = 0; i < numStars; i++) {
+            stars.push({
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
                 radius: Math.random() * 1.8 + 0.2,
@@ -1782,10 +1321,10 @@ html_content = f"""<!DOCTYPE html>
                 alpha: Math.random() * 0.8 + 0.2,
                 vx: (Math.random() - 0.5) * 0.2,
                 vy: (Math.random() - 0.5) * 0.2
-            }});
-        }}
+            });
+        }
 
-        function drawGalaxy() {{
+        function drawGalaxy() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
             const grad1 = ctx.createRadialGradient(canvas.width*0.3, canvas.height*0.3, 10, canvas.width*0.3, canvas.height*0.3, 500);
@@ -1800,7 +1339,7 @@ html_content = f"""<!DOCTYPE html>
             ctx.fillStyle = grad2;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            stars.forEach(star => {{
+            stars.forEach(star => {
                 ctx.beginPath();
                 ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
                 ctx.fillStyle = star.color;
@@ -1818,28 +1357,12 @@ html_content = f"""<!DOCTYPE html>
                 if (star.x > canvas.width) star.x = 0;
                 if (star.y < 0) star.y = canvas.height;
                 if (star.y > canvas.height) star.y = 0;
-            }});
+            });
 
             requestAnimationFrame(drawGalaxy);
-        }}
+        }
 
         drawGalaxy();
     </script>
 </body>
 </html>
-"""
-
-with open(HTML_OUTPUT, 'w', encoding='utf-8') as f:
-    f.write(html_content)
-
-with open(HTML_RESPALDO, 'w', encoding='utf-8') as f:
-    f.write(html_content)
-
-with open(HTML_INDEX, 'w', encoding='utf-8') as f:
-    f.write(html_content)
-
-print(f"      Tablero HTML guardado en: {HTML_OUTPUT}")
-print(f"      Tablero HTML de Respaldo guardado en: {HTML_RESPALDO}")
-print(f"      Tablero HTML Index guardado en: {HTML_INDEX}")
-
-print("\n=== PROCESO FINALIZADO CON ÉXITO ===")

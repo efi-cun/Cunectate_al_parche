@@ -18,6 +18,7 @@ Bienvenida Facilitadores/
 ├── ACTUALIZAR_TABLERO.bat                <-- Ejecutable de 1-Clic en Batch
 ├── Consolidado_Bienvenida_Facilitadores.xlsx <-- Excel generado con Fórmulas BUSCARV en 1.500 filas (Salida)
 ├── tablero.html                          <-- Tablero Web Galáctico principal (Salida)
+├── index.html                            <-- Tablero Web para publicación/servidor web (Salida)
 ├── tablero_respaldo.html                 <-- Copia autocontenida de respaldo
 ├── Asistencia/
 │   ├── TCFRegistrodeAsistenciaFacilitadores*.csv <-- Reporte de asistencia de entrada
@@ -43,19 +44,20 @@ Bienvenida Facilitadores/
   - **Interacción al Clic**: Al hacer clic en la tarjeta, abre una **Ventana Desplegable/Modal (`#modal-asistentes-completos`) con la lista completa de todos los asistentes válidos y un Buscador en tiempo real** para filtrar instantáneamente por Cédula, Nombre, Escuela, Regional o Modalidad.
 - **Subgrid KPI**: Tarjeta `ASISTENCIA PRESENCIAL` (con modal general por regiones) y `ASISTENCIA VIRTUAL`.
 - **Panel de Escuelas Dividido en 2 Columnas**:
-  - **Columna Izquierda (`escuelas-panel`)**: Total por Escuela y barra de porcentaje.
-  - **Columna Derecha (`escuelas-panel`)**: Conteo Virtual vs Presencial. Clic en cualquier escuela abre el modal emergente de desglose regional por sede (`#modal-escuela-detalle`).
+  - **Columna Izquierda (`escuelas-panel`)**: Total por Escuela (agrupado por Columna H `ESCUELA`). Clic en cualquier item abre un **modal emergente (`#modal-escuela-centros-costo`)** con el desglose detallado de los datos de la **Columna I (`Nombre Centro Costo`)**.
+  - **Columna Derecha (`escuelas-panel`)**: Conteo Virtual vs Presencial (agrupado por Columna H `ESCUELA`). Clic en cualquier escuela abre el modal emergente de desglose regional por sede (`#modal-escuela-detalle`).
 - **Buscador Superior de Escuelas**: Filtra sincrónicamente ambas columnas en tiempo real.
 
 ### C. Despliegue de Fórmulas BUSCARV a lo largo de 1.500 Filas
 - En las hojas `Consolidado_Unicos` y `Duplicados`, los campos recuperados de Planta contienen la fórmula **desplegada a lo largo de 1.500 filas**:
-  - `INVITACIÓN` (Col A): `=IF(BN=" me","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:I, 2, FALSE), "NO ENCONTRADO EN PLANTA"))`
+  - `INVITACIÓN` (Col A): `=IF(BN="","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:Q, 2, FALSE), "NO ENCONTRADO EN PLANTA"))`
   - `CEDULA` (Col B): Número de Cédula de asistencia.
-  - `NOMBRE` (Col C): Nombre limpio de asistencia o `=IF(BN=" me","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:I, 3, FALSE), ""))`
-  - `Nombre Nivel 2` (Col D): `=IF(BN=" me","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:I, 5, FALSE), "NO ENCONTRADO EN PLANTA"))`
-  - `Nombre Nivel 3` (Col E): `=IF(BN=" me","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:I, 6, FALSE), "NO ENCONTRADO EN PLANTA"))`
-  - `Descripción Cargo` (Col F): `=IF(BN=" me","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:I, 8, FALSE), "DOCENTE / FACILITADOR"))`
-  - `Nombre Centro Costo` (Col G): `=IF(BN=" me me","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:I, 9, FALSE), "GENERAL"))`
+  - `NOMBRE` (Col C): Nombre limpio de asistencia o `=IF(BN="","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:Q, 3, FALSE), ""))`
+  - `Nombre Nivel 2` (Col D): `=IF(BN="","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:Q, 5, FALSE), "NO ENCONTRADO EN PLANTA"))`
+  - `Nombre Nivel 3` (Col E): `=IF(BN="","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:Q, 6, FALSE), "NO ENCONTRADO EN PLANTA"))`
+  - `Descripción Cargo` (Col F): `=IF(BN="","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:Q, 8, FALSE), "DOCENTE / FACILITADOR"))`
+  - `Nombre Centro Costo` (Col G): `=IF(BN="","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:Q, 9, FALSE), "GENERAL"))`
+  - `ESCUELA` (Col H): `=IF(BN="","",IFERROR(VLOOKUP(BN, PLANTA_BASE!A:Q, 17, FALSE), "GENERAL"))`
 
 ---
 

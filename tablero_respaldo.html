@@ -108,30 +108,63 @@
 
         .header-actions {
             display: flex;
-            align-items: center;
-            gap: 1rem;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.5rem;
+        }
+
+        .header-banner-img {
+            height: 62px;
+            width: auto;
+            object-fit: contain;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 242, 254, 0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .header-banner-img:hover {
+            transform: scale(1.03);
         }
 
         .live-badge {
             display: flex;
             align-items: center;
-            gap: 8px;
-            background: rgba(0, 255, 135, 0.1);
-            border: 1px solid rgba(0, 255, 135, 0.3);
-            padding: 8px 18px;
-            border-radius: 30px;
-            font-size: 0.85rem;
-            color: var(--cun-green-glow);
-            font-weight: 700;
+            gap: 6px;
+            background: rgba(0, 255, 135, 0.08);
+            border: 1px solid rgba(0, 255, 135, 0.25);
+            padding: 3px 10px;
+            border-radius: 8px;
         }
 
         .live-dot {
-            width: 9px;
-            height: 9px;
+            width: 6px;
+            height: 6px;
             background-color: var(--cun-green-glow);
             border-radius: 50%;
-            box-shadow: 0 0 12px var(--cun-green-glow);
+            box-shadow: 0 0 8px var(--cun-green-glow);
             animation: pulse 1.5s infinite;
+            flex-shrink: 0;
+        }
+
+        .live-info {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1;
+        }
+
+        .live-title {
+            font-size: 0.55rem;
+            font-weight: 700;
+            color: var(--cun-green-glow);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .live-date {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: #FFFFFF;
         }
 
         @keyframes pulse {
@@ -162,7 +195,7 @@
         }
 
         .kpi-hero-card::after {
-            content: "Haz clic aquí para ver/filtrar el listado completo de asistentes ➔";
+            content: "Haz clic aquí para ver el listado completo de asistentes ➔";
             position: absolute;
             top: 18px;
             right: 24px;
@@ -785,13 +818,17 @@
                 </div>
                 <div class="brand-title">
                     <h1>Bienvenida Facilitadores CUN</h1>
-                    <p>Tablero Dinámico de Asistencia Válida</p>
+                    <p>Tablero Dinámico de Asistencia</p>
                 </div>
             </div>
             <div class="header-actions">
+                <img src="image.png" alt="Cunéctate al Parche" class="header-banner-img">
                 <div class="live-badge">
                     <div class="live-dot"></div>
-                    REPORTE EN VIVO
+                    <div class="live-info">
+                        <span class="live-title">ÚLTIMA ACTUALIZACIÓN:</span>
+                        <span class="live-date">30/07/2026 02:10 PM</span>
+                    </div>
                 </div>
             </div>
         </header>
@@ -800,15 +837,15 @@
         <div class="kpi-hero-card" id="btn-total-asistentes">
             <div class="hero-header">
                 <div class="hero-info">
-                    <span class="kpi-title">TOTAL REGISTROS ÚNICOS VÁLIDOS</span>
+                    <span class="kpi-title">TOTAL REGISTROS</span>
                     <div class="kpi-value" id="kpi-total">35</div>
-                    <div class="kpi-subtext">Facilitadores validados en Planta (excluye duplicados)</div>
+                    <div class="kpi-subtext">..</div>
                 </div>
                 <div class="kpi-icon icon-total"><i class="fa-solid fa-users"></i></div>
             </div>
             <div class="hero-progress-wrapper">
                 <div class="hero-progress-meta">
-                    <span>PORCENTAJE DE ASISTENCIA SOBRE LA PLANTA TOTAL (35 / 1188 FACILITADORES)</span>
+                    <span>PORCENTAJE DE ASISTENCIA EVENTO (35 / 1188 FACILITADORES)</span>
                     <span class="highlight">2.9%</span>
                 </div>
                 <div class="hero-progress-bg">
@@ -825,7 +862,7 @@
                     <div class="kpi-icon icon-presencial"><i class="fa-solid fa-building-user"></i></div>
                 </div>
                 <div class="kpi-value" style="color: var(--cun-green-glow);">26</div>
-                <div class="kpi-subtext">Asistentes presenciales validados</div>
+                <div class="kpi-subtext">...</div>
             </div>
 
             <div class="kpi-card">
@@ -834,14 +871,14 @@
                     <div class="kpi-icon icon-virtual"><i class="fa-solid fa-laptop-code"></i></div>
                 </div>
                 <div class="kpi-value" style="color: #C084FC;">9</div>
-                <div class="kpi-subtext">Conexiones virtuales validadas</div>
+                <div class="kpi-subtext">...</div>
             </div>
         </div>
 
         <div class="section-header">
             <div class="section-title">
                 <i class="fa-solid fa-chart-pie" style="color: var(--cun-green-glow);"></i>
-                Análisis de Asistencia por Escuela / Centro de Costo
+                Análisis de Asistencia por Escuela 
             </div>
             <div class="search-box">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -855,7 +892,7 @@
             <div class="escuelas-panel">
                 <div class="panel-header">
                     <h3><i class="fa-solid fa-school"></i> Total por Escuela</h3>
-                    <span>Participación (%)</span>
+                    <span>Clic para ver Centros de Costo (Col. I)</span>
                 </div>
                 <div class="escuelas-list" id="escuelas-totales-list">
                 </div>
@@ -877,7 +914,7 @@
     <div class="modal-overlay" id="modal-asistentes-completos">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-address-book" style="color: var(--cun-cyan);"></i> Listado Completo de Registros Únicos Válidos (<span id="asistentes-counter">35</span>)</h3>
+                <h3><i class="fa-solid fa-address-book" style="color: var(--cun-cyan);"></i> Listado Completo de Registros (<span id="asistentes-counter">35</span>)</h3>
                 <button class="close-modal" id="close-asistentes-modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             
@@ -885,7 +922,7 @@
             <div class="asistentes-modal-search-wrapper">
                 <div class="asistentes-modal-search">
                     <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="asistentes-modal-input" placeholder="Buscar por Nombre, Cédula, Escuela, Regional o Modalidad...">
+                    <input type="text" id="asistentes-modal-input" placeholder="Buscar por Nombre, Cédula, Escuela, Centro Costo, Regional o Modalidad...">
                 </div>
             </div>
 
@@ -896,7 +933,8 @@
                         <tr>
                             <th>Cédula</th>
                             <th>Nombre Completo</th>
-                            <th>Escuela / Centro Costo</th>
+                            <th>Escuela (Col. H)</th>
+                            <th>Centro Costo (Col. I)</th>
                             <th>Regional</th>
                             <th>Sede</th>
                             <th>Modalidad</th>
@@ -933,10 +971,25 @@
         </div>
     </div>
 
+    <!-- MODAL 3: EMERGENTE DETALLADO DE COLUMNA I (NOMBRE CENTRO COSTO) POR ESCUELA -->
+    <div class="modal-overlay" id="modal-escuela-centros-costo">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="centros-costo-modal-title" style="color: var(--cun-green-glow);"><i class="fa-solid fa-layer-group"></i> Detalle Columna I por Escuela</h3>
+                <button class="close-modal" id="close-centros-costo-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div style="margin-bottom: 1.25rem; color: var(--cun-muted); font-size: 0.88rem; font-weight: 600;">
+                Desglose de registros correspondientes a la <strong style="color: var(--cun-cyan);">Columna I (Nombre Centro Costo)</strong> para esta escuela:
+            </div>
+            <div class="regional-list" id="centros-costo-modal-body">
+            </div>
+        </div>
+    </div>
+
     <script>
-        const escuelasData = [{"escuela": "INVESTIGACIONES", "total": 8, "presencial": 6, "virtual": 2, "porcentaje": 22.9, "regiones_presencial": {"REGIONAL BOGOTA": 6}, "regiones_virtual": {"REGIONAL BOYACA": 1, "REGIONAL SANTANDER": 1}, "sedes": {"BOGOTA CENTRO": 5, "TUNJA": 1, "BOGOTA NORTE": 1, "BUCARAMANGA": 1}}, {"escuela": "DISENO GRAFICO", "total": 6, "presencial": 4, "virtual": 2, "porcentaje": 17.1, "regiones_presencial": {"REGIONAL BOGOTA": 3, "REGIONAL TOLIMA": 1}, "regiones_virtual": {"REGIONAL MAGDALENA": 2}, "sedes": {"BOGOTA CENTRO": 3, "SANTA MARTA": 2, "IBAGUE": 1}}, {"escuela": "EMPRENDIMIENTO", "total": 6, "presencial": 4, "virtual": 2, "porcentaje": 17.1, "regiones_presencial": {"REGIONAL BOGOTA": 2, "REGIONAL SUCRE": 1, "REGIONAL ATLANTICO": 1}, "regiones_virtual": {"REGIONAL QUINDIO": 1, "REGIONAL MAGDALENA": 1}, "sedes": {"BOGOTA CENTRO": 2, "ARMENIA": 1, "SANTA MARTA": 1, "SINCELEJO": 1, "BARRANQUILLA": 1}}, {"escuela": "CIENCIAS BASICAS", "total": 2, "presencial": 2, "virtual": 0, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL BOGOTA": 2}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 2}}, {"escuela": "COMUNICACION SOCIAL Y PERIODISMO", "total": 2, "presencial": 2, "virtual": 0, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL TOLIMA": 1, "REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"IBAGUE": 1, "BOGOTA CENTRO": 1}}, {"escuela": "CONTADURIA PUBLICA", "total": 2, "presencial": 1, "virtual": 1, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL CORDOBA": 1}, "regiones_virtual": {"REGIONAL NARINO": 1}, "sedes": {"MONTERIA": 1, "IPIALES": 1}}, {"escuela": "DISENO Y PRODUCCION DE MODAS", "total": 2, "presencial": 1, "virtual": 1, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {"REGIONAL MAGDALENA": 1}, "sedes": {"BOGOTA CENTRO": 1, "SANTA MARTA": 1}}, {"escuela": "IDIOMAS", "total": 2, "presencial": 1, "virtual": 1, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {"REGIONAL SANTANDER": 1}, "sedes": {"BUCARAMANGA": 1, "BOGOTA CENTRO": 1}}, {"escuela": "DIRECCION Y PRODUCCION DE MEDIOS AUDIOVISUALES", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 1}}, {"escuela": "ESPECIALIZACION EN PROSPECTIVA ESTRATEGICA", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 1}}, {"escuela": "ESPECIALIZACION EN SEGURIDAD Y SALUD EN EL TRABAJO", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 1}}, {"escuela": "MARKETING DIGITAL", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL SUCRE": 1}, "regiones_virtual": {}, "sedes": {"SINCELEJO": 1}}, {"escuela": "PUBLICIDAD Y MERCADEO", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 1}}];
+        const escuelasData = [{"escuela": "BELLAS ARTES", "total": 11, "presencial": 9, "virtual": 2, "porcentaje": 31.4, "regiones_presencial": {"REGIONAL BOGOTA": 6, "REGIONAL TOLIMA": 2, "REGIONAL SUCRE": 1}, "regiones_virtual": {"REGIONAL MAGDALENA": 2}, "sedes": {"BOGOTA CENTRO": 6, "SANTA MARTA": 2, "IBAGUE": 2, "SINCELEJO": 1}, "centros_costo": {"DISENO GRAFICO": 5, "DISENO Y PRODUCCION DE MODAS": 2, "COMUNICACION SOCIAL Y PERIODISMO": 2, "MARKETING DIGITAL": 1, "DIRECCION Y PRODUCCION DE MEDIOS AUDIOVISUALES": 1}}, {"escuela": "TRANSVERSALES", "total": 10, "presencial": 7, "virtual": 3, "porcentaje": 28.6, "regiones_presencial": {"REGIONAL BOGOTA": 5, "REGIONAL SUCRE": 1, "REGIONAL ATLANTICO": 1}, "regiones_virtual": {"REGIONAL QUINDIO": 1, "REGIONAL SANTANDER": 1, "REGIONAL MAGDALENA": 1}, "sedes": {"BOGOTA CENTRO": 5, "ARMENIA": 1, "BUCARAMANGA": 1, "SANTA MARTA": 1, "SINCELEJO": 1, "BARRANQUILLA": 1}, "centros_costo": {"EMPRENDIMIENTO": 6, "IDIOMAS": 2, "CIENCIAS BASICAS": 2}}, {"escuela": "INVESTIGACIONES", "total": 8, "presencial": 6, "virtual": 2, "porcentaje": 22.9, "regiones_presencial": {"REGIONAL BOGOTA": 6}, "regiones_virtual": {"REGIONAL BOYACA": 1, "REGIONAL SANTANDER": 1}, "sedes": {"BOGOTA CENTRO": 5, "TUNJA": 1, "BOGOTA NORTE": 1, "BUCARAMANGA": 1}, "centros_costo": {"INVESTIGACIONES": 8}}, {"escuela": "NEGOCIOS", "total": 3, "presencial": 2, "virtual": 1, "porcentaje": 8.6, "regiones_presencial": {"REGIONAL BOGOTA": 1, "REGIONAL CORDOBA": 1}, "regiones_virtual": {"REGIONAL NARINO": 1}, "sedes": {"BOGOTA CENTRO": 1, "MONTERIA": 1, "IPIALES": 1}, "centros_costo": {"CONTADURIA PUBLICA": 2, "PUBLICIDAD Y MERCADEO": 1}}, {"escuela": "ESPECIALIZACIONES", "total": 2, "presencial": 2, "virtual": 0, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL BOGOTA": 2}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 2}, "centros_costo": {"ESPECIALIZACION EN PROSPECTIVA ESTRATEGICA": 1, "ESPECIALIZACION EN SEGURIDAD Y SALUD EN EL TRABAJO": 1}}, {"escuela": "", "total": 1, "presencial": 0, "virtual": 1, "porcentaje": 2.9, "regiones_presencial": {}, "regiones_virtual": {"REGIONAL MAGDALENA": 1}, "sedes": {"SANTA MARTA": 1}, "centros_costo": {"DISENO GRAFICO": 1}}];
         const regionalPresencialData = {"REGIONAL BOGOTA": 20, "REGIONAL SUCRE": 2, "REGIONAL TOLIMA": 2, "REGIONAL CORDOBA": 1, "REGIONAL ATLANTICO": 1};
-        const asistentesData = [{"cedula": "79218737", "nombre": "OSCAR JAVIER MORENO MARTINEZ", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL QUINDIO", "sede": "ARMENIA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/PROYECCION", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "53133811", "nombre": "DIANA CAROLINA POLO RAMOS", "escuela": "DISENO GRAFICO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1083001191", "nombre": "LADY MARIANE FONTALVO TOLOSA", "escuela": "DISENO GRAFICO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1005570324", "nombre": "DANIELA ANDREA MARTINEZ ESPANA", "escuela": "MARKETING DIGITAL", "regional": "REGIONAL SUCRE", "sede": "SINCELEJO", "cargo": "DOC AUX T&T/N/MT/MAR DIG", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "1032451810", "nombre": "SERGIO IVAN ALBARRACIN SANCHEZ", "escuela": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1098750510", "nombre": "NELLY JOHANA ALVAREZ IDARRAGA", "escuela": "IDIOMAS", "regional": "REGIONAL SANTANDER", "sede": "BUCARAMANGA", "cargo": "DOC ASIS/N/V/TC/IDIOMAS/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "80099466", "nombre": "ALBYN FABIAN LEON BAQUERO", "escuela": "PUBLICIDAD Y MERCADEO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC TITULAR/N/V/MT/PUB Y MERC", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "80186209", "nombre": "MICHEL FEDERICO BUSTOS ROMERO", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/INVESTIGACIONES/INVESTIG", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "52412273", "nombre": "MELVY CRISTIANI RIVERA", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/TC/EMPRENDIMIENTO/PROYECTOS A", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1020752802", "nombre": "CRISTOBAL GOMEZ REINA", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "78024830", "nombre": "EMERSON MANUEL CASTANO PATERNINA", "escuela": "CONTADURIA PUBLICA", "regional": "REGIONAL CORDOBA", "sede": "MONTERIA", "cargo": "DOCENTE ASIS/N/TC/CONT PUBL/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "7175280", "nombre": "JULIO CESAR PACHON EUGENIO", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOYACA", "sede": "TUNJA", "cargo": "DOC AUX/N/V/TC/INVESTIGACIONES/INVESTIGACI", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1032363391", "nombre": "JENNY ROCIO HERNANDEZ FLOREZ", "escuela": "DISENO Y PRODUCCION DE MODAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/DIS PROD MOD/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "79955605", "nombre": "RAFAEL FRANCISCO DIAZ VASQUEZ", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA NORTE", "cargo": "DOC AUX T&T/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1019066088", "nombre": "DIEGO FERNANDO DELGADO CUELLAR", "escuela": "DIRECCION Y PRODUCCION DE MEDIOS AUDIOVISUALES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/V/TC/DIR PROD ME AUD/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1013591700", "nombre": "JOHNY ANDRES JARAMILLO PALACIO", "escuela": "CIENCIAS BASICAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/CIENCIAS BASI/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "53044000", "nombre": "KELLY JOHANNA SIERRA RODRIGUEZ", "escuela": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1020788193", "nombre": "DANIEL FELIPE BELTRAN JIMENEZ", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1085920254", "nombre": "JANETH CRISTINA MENDEZ ROSERO", "escuela": "CONTADURIA PUBLICA", "regional": "REGIONAL NARINO", "sede": "IPIALES", "cargo": "DOC AUX/N/V/MT/CONTADURIA", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1032415074", "nombre": "GIOVANNY ROBLEDO VILLANUEVA", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "80882570", "nombre": "ANDRES ALBERTO GARRIDO TORRES", "escuela": "IDIOMAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/IDIOMAS/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "52365713", "nombre": "ERIKA ROCIO ROMERO ORJUELA", "escuela": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1010229459", "nombre": "JUAN CAMILO BOHORQUEZ VIVAS", "escuela": "COMUNICACION SOCIAL Y PERIODISMO", "regional": "REGIONAL TOLIMA", "sede": "IBAGUE", "cargo": "DOCENTE ASIS/N/TC/COM SOC Y PER/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "1082931770", "nombre": "JUAN LUIS CAMARGO GRANADOS", "escuela": "COMUNICACION SOCIAL Y PERIODISMO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/COM SOC Y PER/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1121835674", "nombre": "JHON ARLEY PARRADO ARENAS", "escuela": "DISENO GRAFICO", "regional": "REGIONAL TOLIMA", "sede": "IBAGUE", "cargo": "DOCENTE AUX/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "60364287", "nombre": "ALEJANDRINA RINCON ACEVEDO", "escuela": "DISENO Y PRODUCCION DE MODAS", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS PROD MOD/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "7630409", "nombre": "JOSE RAFAEL DAVILA FERNANDEZ", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1075667294", "nombre": "CHRISTIAN DAVID RAMIREZ RUBIANO", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/INVESTIGA/INVESTIGACION", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "65786864", "nombre": "YAMILE MEDINA CASTANEDA", "escuela": "CIENCIAS BASICAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/CIEN BASI/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1102860563", "nombre": "RAFAEL EDUARDO PATERNINA DIAZ", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL SUCRE", "sede": "SINCELEJO", "cargo": "DOC ASIS/N/V/TC/EMPRENDIMIENTO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "52542490", "nombre": "CAROLL ALEAN MAHECHA", "escuela": "ESPECIALIZACION EN PROSPECTIVA ESTRATEGICA", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/ESP PROSP ESTR/PROYECC", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1013587134", "nombre": "CLAUDIA MILENA OSPINA LOPEZ", "escuela": "ESPECIALIZACION EN SEGURIDAD Y SALUD EN EL TRABAJO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/ESP SEG SALUD TRAB/FUN.A", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "8642585", "nombre": "JUAN CARLOS HERRERA ESTRADA", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX/N/V/TC/INVESTIGACIONES/INVESTIGACI", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1140863887", "nombre": "NICOLE NATHALY ARROYO SANCHEZ", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL ATLANTICO", "sede": "BARRANQUILLA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "88209112", "nombre": "WILSON BONILLA PABON", "escuela": "INVESTIGACIONES", "regional": "REGIONAL SANTANDER", "sede": "BUCARAMANGA", "cargo": "DOC TITULAR/N/V/TC/INVESTIGACIONES/INVESTI", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}];
+        const asistentesData = [{"cedula": "79218737", "nombre": "OSCAR JAVIER MORENO MARTINEZ", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL QUINDIO", "sede": "ARMENIA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/PROYECCION", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "53133811", "nombre": "DIANA CAROLINA POLO RAMOS", "escuela": "", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1083001191", "nombre": "LADY MARIANE FONTALVO TOLOSA", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1005570324", "nombre": "DANIELA ANDREA MARTINEZ ESPANA", "escuela": "BELLAS ARTES", "centro_costo": "MARKETING DIGITAL", "regional": "REGIONAL SUCRE", "sede": "SINCELEJO", "cargo": "DOC AUX T&T/N/MT/MAR DIG", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "1032451810", "nombre": "SERGIO IVAN ALBARRACIN SANCHEZ", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1098750510", "nombre": "NELLY JOHANA ALVAREZ IDARRAGA", "escuela": "TRANSVERSALES", "centro_costo": "IDIOMAS", "regional": "REGIONAL SANTANDER", "sede": "BUCARAMANGA", "cargo": "DOC ASIS/N/V/TC/IDIOMAS/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "80099466", "nombre": "ALBYN FABIAN LEON BAQUERO", "escuela": "NEGOCIOS", "centro_costo": "PUBLICIDAD Y MERCADEO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC TITULAR/N/V/MT/PUB Y MERC", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "80186209", "nombre": "MICHEL FEDERICO BUSTOS ROMERO", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/INVESTIGACIONES/INVESTIG", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "52412273", "nombre": "MELVY CRISTIANI RIVERA", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/TC/EMPRENDIMIENTO/PROYECTOS A", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1020752802", "nombre": "CRISTOBAL GOMEZ REINA", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "78024830", "nombre": "EMERSON MANUEL CASTANO PATERNINA", "escuela": "NEGOCIOS", "centro_costo": "CONTADURIA PUBLICA", "regional": "REGIONAL CORDOBA", "sede": "MONTERIA", "cargo": "DOCENTE ASIS/N/TC/CONT PUBL/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "7175280", "nombre": "JULIO CESAR PACHON EUGENIO", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOYACA", "sede": "TUNJA", "cargo": "DOC AUX/N/V/TC/INVESTIGACIONES/INVESTIGACI", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1032363391", "nombre": "JENNY ROCIO HERNANDEZ FLOREZ", "escuela": "BELLAS ARTES", "centro_costo": "DISENO Y PRODUCCION DE MODAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/DIS PROD MOD/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "79955605", "nombre": "RAFAEL FRANCISCO DIAZ VASQUEZ", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA NORTE", "cargo": "DOC AUX T&T/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1019066088", "nombre": "DIEGO FERNANDO DELGADO CUELLAR", "escuela": "BELLAS ARTES", "centro_costo": "DIRECCION Y PRODUCCION DE MEDIOS AUDIOVISUALES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/V/TC/DIR PROD ME AUD/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1013591700", "nombre": "JOHNY ANDRES JARAMILLO PALACIO", "escuela": "TRANSVERSALES", "centro_costo": "CIENCIAS BASICAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/CIENCIAS BASI/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "53044000", "nombre": "KELLY JOHANNA SIERRA RODRIGUEZ", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1020788193", "nombre": "DANIEL FELIPE BELTRAN JIMENEZ", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1085920254", "nombre": "JANETH CRISTINA MENDEZ ROSERO", "escuela": "NEGOCIOS", "centro_costo": "CONTADURIA PUBLICA", "regional": "REGIONAL NARINO", "sede": "IPIALES", "cargo": "DOC AUX/N/V/MT/CONTADURIA", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1032415074", "nombre": "GIOVANNY ROBLEDO VILLANUEVA", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "80882570", "nombre": "ANDRES ALBERTO GARRIDO TORRES", "escuela": "TRANSVERSALES", "centro_costo": "IDIOMAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/IDIOMAS/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "52365713", "nombre": "ERIKA ROCIO ROMERO ORJUELA", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1010229459", "nombre": "JUAN CAMILO BOHORQUEZ VIVAS", "escuela": "BELLAS ARTES", "centro_costo": "COMUNICACION SOCIAL Y PERIODISMO", "regional": "REGIONAL TOLIMA", "sede": "IBAGUE", "cargo": "DOCENTE ASIS/N/TC/COM SOC Y PER/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "1082931770", "nombre": "JUAN LUIS CAMARGO GRANADOS", "escuela": "BELLAS ARTES", "centro_costo": "COMUNICACION SOCIAL Y PERIODISMO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/COM SOC Y PER/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1121835674", "nombre": "JHON ARLEY PARRADO ARENAS", "escuela": "BELLAS ARTES", "centro_costo": "DISENO GRAFICO", "regional": "REGIONAL TOLIMA", "sede": "IBAGUE", "cargo": "DOCENTE AUX/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "60364287", "nombre": "ALEJANDRINA RINCON ACEVEDO", "escuela": "BELLAS ARTES", "centro_costo": "DISENO Y PRODUCCION DE MODAS", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS PROD MOD/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "7630409", "nombre": "JOSE RAFAEL DAVILA FERNANDEZ", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1075667294", "nombre": "CHRISTIAN DAVID RAMIREZ RUBIANO", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/INVESTIGA/INVESTIGACION", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "65786864", "nombre": "YAMILE MEDINA CASTANEDA", "escuela": "TRANSVERSALES", "centro_costo": "CIENCIAS BASICAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/CIEN BASI/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1102860563", "nombre": "RAFAEL EDUARDO PATERNINA DIAZ", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL SUCRE", "sede": "SINCELEJO", "cargo": "DOC ASIS/N/V/TC/EMPRENDIMIENTO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "52542490", "nombre": "CAROLL ALEAN MAHECHA", "escuela": "ESPECIALIZACIONES", "centro_costo": "ESPECIALIZACION EN PROSPECTIVA ESTRATEGICA", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/ESP PROSP ESTR/PROYECC", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1013587134", "nombre": "CLAUDIA MILENA OSPINA LOPEZ", "escuela": "ESPECIALIZACIONES", "centro_costo": "ESPECIALIZACION EN SEGURIDAD Y SALUD EN EL TRABAJO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/ESP SEG SALUD TRAB/FUN.A", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "8642585", "nombre": "JUAN CARLOS HERRERA ESTRADA", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX/N/V/TC/INVESTIGACIONES/INVESTIGACI", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1140863887", "nombre": "NICOLE NATHALY ARROYO SANCHEZ", "escuela": "TRANSVERSALES", "centro_costo": "EMPRENDIMIENTO", "regional": "REGIONAL ATLANTICO", "sede": "BARRANQUILLA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "88209112", "nombre": "WILSON BONILLA PABON", "escuela": "INVESTIGACIONES", "centro_costo": "INVESTIGACIONES", "regional": "REGIONAL SANTANDER", "sede": "BUCARAMANGA", "cargo": "DOC TITULAR/N/V/TC/INVESTIGACIONES/INVESTI", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}];
 
         const escuelasTotalesContainer = document.getElementById('escuelas-totales-list');
         const escuelasModalidadesContainer = document.getElementById('escuelas-modalidades-list');
@@ -958,6 +1011,7 @@
                 (a.nombre && a.nombre.toLowerCase().includes(query)) ||
                 (a.cedula && a.cedula.toLowerCase().includes(query)) ||
                 (a.escuela && a.escuela.toLowerCase().includes(query)) ||
+                (a.centro_costo && a.centro_costo.toLowerCase().includes(query)) ||
                 (a.regional && a.regional.toLowerCase().includes(query)) ||
                 (a.modalidad && a.modalidad.toLowerCase().includes(query))
             );
@@ -965,7 +1019,7 @@
             asistentesCounter.innerText = `${filtered.length} / ${asistentesData.length}`;
 
             if (filtered.length === 0) {
-                asistentesTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: var(--cun-muted);">No se encontraron asistentes con ese criterio de búsqueda</td></tr>';
+                asistentesTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--cun-muted);">No se encontraron asistentes con ese criterio de búsqueda</td></tr>';
                 return;
             }
 
@@ -975,7 +1029,8 @@
                 tr.innerHTML = `
                     <td style="font-weight:700; font-family:monospace; color:var(--cun-cyan);">${item.cedula}</td>
                     <td style="font-weight:700; color:#FFFFFF;">${item.nombre}</td>
-                    <td>${item.escuela}</td>
+                    <td><span style="background:rgba(0,168,89,0.18); color:var(--cun-green-glow); border:1px solid rgba(0,255,135,0.3); padding:3px 8px; border-radius:8px; font-weight:700; font-size:0.78rem;">${item.escuela}</span></td>
+                    <td style="color:var(--cun-muted);">${item.centro_costo}</td>
                     <td>${item.regional}</td>
                     <td style="color:var(--cun-muted);">${item.sede}</td>
                     <td><span class="${badgeClass}">${item.modalidad}</span></td>
@@ -1005,6 +1060,51 @@
 
         asistentesModalInput.addEventListener('input', (e) => {
             renderAsistentesModal(e.target.value);
+        });
+
+        // Modal Detalle Centros de Costo (Columna I) por Escuela
+        const modalCentrosCosto = document.getElementById('modal-escuela-centros-costo');
+        const centrosCostoModalTitle = document.getElementById('centros-costo-modal-title');
+        const centrosCostoModalBody = document.getElementById('centros-costo-modal-body');
+        const closeCentrosCostoModalBtn = document.getElementById('close-centros-costo-modal');
+
+        function openEscuelaCentrosCostoModal(item) {
+            centrosCostoModalTitle.innerHTML = `<i class="fa-solid fa-folder-tree" style="color: var(--cun-green-glow);"></i> Centros de Costo (Columna I): ${item.escuela}`;
+            centrosCostoModalBody.innerHTML = '';
+
+            const ccKeys = Object.keys(item.centros_costo || {});
+            if (ccKeys.length === 0) {
+                centrosCostoModalBody.innerHTML = '<div style="text-align:center; color:var(--cun-muted); padding:2rem;">No hay centros de costo registrados para esta escuela</div>';
+            } else {
+                ccKeys.forEach(cc => {
+                    const count = item.centros_costo[cc];
+                    const pct = item.total > 0 ? ((count / item.total) * 100).toFixed(1) : 0;
+                    const card = document.createElement('div');
+                    card.className = 'regional-card';
+                    card.style.background = 'rgba(15, 23, 42, 0.85)';
+                    card.style.border = '1px solid var(--cun-border)';
+                    card.innerHTML = `
+                        <div style="display:flex; flex-direction:column; gap:4px; flex:1;">
+                            <span class="regional-name" style="font-size:0.92rem; color:#FFFFFF;"><i class="fa-solid fa-bookmark" style="color:var(--cun-cyan);"></i> ${cc}</span>
+                            <span style="font-size:0.75rem; color:var(--cun-muted);">${pct}% del total de la escuela (${count} de ${item.total})</span>
+                        </div>
+                        <span class="regional-badge" style="background: linear-gradient(135deg, var(--cun-green), var(--cun-cyan)); color: #050B14; font-weight: 800;">${count} Facilitadores</span>
+                    `;
+                    centrosCostoModalBody.appendChild(card);
+                });
+            }
+
+            modalCentrosCosto.classList.add('active');
+        }
+
+        closeCentrosCostoModalBtn.addEventListener('click', () => {
+            modalCentrosCosto.classList.remove('active');
+        });
+
+        modalCentrosCosto.addEventListener('click', (e) => {
+            if (e.target === modalCentrosCosto) {
+                modalCentrosCosto.classList.remove('active');
+            }
         });
 
         // Modal Detalle Escuela
@@ -1112,9 +1212,10 @@
             }
 
             filtered.forEach(item => {
-                // Card Columna Izquierda: Total por Escuela
+                // Card Columna Izquierda: Total por Escuela (Clic para emergente Columna I)
                 const cardLeft = document.createElement('div');
                 cardLeft.className = 'escuela-card-left';
+                cardLeft.style.cursor = 'pointer';
                 cardLeft.innerHTML = `
                     <div class="card-left-header">
                         <span class="card-left-title">${item.escuela}</span>
@@ -1123,7 +1224,14 @@
                     <div class="progress-bar-bg">
                         <div class="progress-bar-fill" style="width: ${item.porcentaje}%;"></div>
                     </div>
+                    <div style="font-size:0.75rem; color: var(--cun-cyan); margin-top:8px; font-weight:700; display:flex; align-items:center; justify-content:space-between;">
+                        <span><i class="fa-solid fa-list-check"></i> Clic para ver Centros de Costo (Col. I)</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
                 `;
+                cardLeft.addEventListener('click', () => {
+                    openEscuelaCentrosCostoModal(item);
+                });
                 escuelasTotalesContainer.appendChild(cardLeft);
 
                 // Card Columna Derecha: Conteo Virtual vs Presencial por Escuela
