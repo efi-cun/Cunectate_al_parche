@@ -32,7 +32,8 @@ echo.
 echo ==============================================================================
 echo       PROCESO COMPLETADO EXITOSAMENTE!
 echo       - Excel consolidado generado: Consolidado_Bienvenida_Facilitadores.xlsx
-echo       - Tablero HTML actualizado: tablero.html, tablero_respaldo.html e index.html
+echo       - Tableros HTML actualizados: tablero.html, tablero_respaldo.html e index.html
+echo       - Repositorio GitHub actualizado: https://github.com/efi-cun/Cunectate_al_parche
 echo ==============================================================================
 echo.
 pause

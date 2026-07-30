@@ -827,7 +827,7 @@
                     <div class="live-dot"></div>
                     <div class="live-info">
                         <span class="live-title">ÚLTIMA ACTUALIZACIÓN:</span>
-                        <span class="live-date">30/07/2026 02:10 PM</span>
+                        <span class="live-date">30/07/2026 02:31 PM</span>
                     </div>
                 </div>
             </div>
@@ -892,7 +892,7 @@
             <div class="escuelas-panel">
                 <div class="panel-header">
                     <h3><i class="fa-solid fa-school"></i> Total por Escuela</h3>
-                    <span>Clic para ver Centros de Costo</span>
+                    <span>Clic para ver Centros de Costo (Col. I)</span>
                 </div>
                 <div class="escuelas-list" id="escuelas-totales-list">
                 </div>
@@ -979,7 +979,7 @@
                 <button class="close-modal" id="close-centros-costo-modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div style="margin-bottom: 1.25rem; color: var(--cun-muted); font-size: 0.88rem; font-weight: 600;">
-                Desglose de  <strong style="color: var(--cun-cyan);">centro de costos </strong> por escuelas:
+                Desglose de registros correspondientes a la <strong style="color: var(--cun-cyan);">Columna I (Nombre Centro Costo)</strong> para esta escuela:
             </div>
             <div class="regional-list" id="centros-costo-modal-body">
             </div>
@@ -1062,14 +1062,14 @@
             renderAsistentesModal(e.target.value);
         });
 
-        // Modal Detalle Centros de Costo por Escuela
+        // Modal Detalle Centros de Costo (Columna I) por Escuela
         const modalCentrosCosto = document.getElementById('modal-escuela-centros-costo');
         const centrosCostoModalTitle = document.getElementById('centros-costo-modal-title');
         const centrosCostoModalBody = document.getElementById('centros-costo-modal-body');
         const closeCentrosCostoModalBtn = document.getElementById('close-centros-costo-modal');
 
         function openEscuelaCentrosCostoModal(item) {
-            centrosCostoModalTitle.innerHTML = `<i class="fa-solid fa-folder-tree" style="color: var(--cun-green-glow);"></i> Centros de Costo: ${item.escuela}`;
+            centrosCostoModalTitle.innerHTML = `<i class="fa-solid fa-folder-tree" style="color: var(--cun-green-glow);"></i> Centros de Costo (Columna I): ${item.escuela}`;
             centrosCostoModalBody.innerHTML = '';
 
             const ccKeys = Object.keys(item.centros_costo || {});
@@ -1225,7 +1225,7 @@
                         <div class="progress-bar-fill" style="width: ${item.porcentaje}%;"></div>
                     </div>
                     <div style="font-size:0.75rem; color: var(--cun-cyan); margin-top:8px; font-weight:700; display:flex; align-items:center; justify-content:space-between;">
-                        <span><i class="fa-solid fa-list-check"></i> Clic para ver Centros de Costo </span>
+                        <span><i class="fa-solid fa-list-check"></i> Clic para ver Centros de Costo (Col. I)</span>
                         <i class="fa-solid fa-chevron-right"></i>
                     </div>
                 `;

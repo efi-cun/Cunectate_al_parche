@@ -1842,4 +1842,31 @@ print(f"      Tablero HTML guardado en: {HTML_OUTPUT}")
 print(f"      Tablero HTML de Respaldo guardado en: {HTML_RESPALDO}")
 print(f"      Tablero HTML Index guardado en: {HTML_INDEX}")
 
+# 6. Sincronización automática con Git y GitHub
+print(f"\n[6/6] Sincronizando y guardando cambios en Git (GitHub)...")
+try:
+    import subprocess
+    commit_msg = f"Actualización Tablero CUN - {fecha_actualizacion}"
+    
+    subprocess.run(["git", "add", "."], check=True, cwd=BASE_DIR)
+    
+    status_proc = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=BASE_DIR)
+    if status_proc.stdout.strip():
+        subprocess.run(["git", "commit", "-m", commit_msg], check=True, cwd=BASE_DIR)
+        print(f"      Commit registrado en Git: '{commit_msg}'")
+    else:
+        print("      No hay cambios nuevos pendientes por registrar en commit.")
+    
+    pull_proc = subprocess.run(["git", "pull", "origin", "main", "--rebase"], capture_output=True, text=True, cwd=BASE_DIR)
+    if pull_proc.returncode != 0:
+        subprocess.run(["git", "pull", "origin", "main", "--allow-unrelated-histories", "--no-edit"], capture_output=True, text=True, cwd=BASE_DIR)
+        
+    push_proc = subprocess.run(["git", "push", "origin", "main"], capture_output=True, text=True, cwd=BASE_DIR)
+    if push_proc.returncode == 0:
+        print("      Repositorio GitHub actualizado exitosamente: https://github.com/efi-cun/Cunectate_al_parche")
+    else:
+        print(f"      ADVERTENCIA al enviar cambios a GitHub: {push_proc.stderr.strip()}")
+except Exception as err:
+    print(f"      ADVERTENCIA: No se pudo completar la sincronización con Git: {err}")
+
 print("\n=== PROCESO FINALIZADO CON ÉXITO ===")
