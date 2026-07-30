@@ -1264,6 +1264,47 @@ html_content = f"""<!DOCTYPE html>
             .escuelas-grid-layout, .kpi-subgrid {{
                 grid-template-columns: 1fr;
             }}
+            .kpi-hero-card::after {{
+                position: static;
+                display: inline-block;
+                margin-top: 14px;
+                content: "Ver listado completo de asistentes ➔";
+                font-size: 0.75rem;
+                padding: 5px 12px;
+            }}
+            header {{
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1.2rem;
+            }}
+            .header-actions {{
+                align-items: flex-start;
+                width: 100%;
+            }}
+        }}
+
+        @media (max-width: 600px) {{
+            .brand-section {{
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }}
+            .brand-title h1 {{
+                font-size: 1.4rem;
+            }}
+            .hero-info .kpi-value {{
+                font-size: 2.75rem;
+            }}
+            .search-box {{
+                min-width: 100%;
+            }}
+            .modal-content {{
+                width: 95%;
+                padding: 1.25rem;
+            }}
+            .asistentes-table {{
+                font-size: 0.78rem;
+            }}
         }}
     </style>
 </head>
