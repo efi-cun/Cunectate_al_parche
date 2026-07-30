@@ -183,13 +183,13 @@ def format_consolidado_with_full_column_formulas(ws, df_asist_data):
             nom_formula = nom_val
         else:
             ced_cell_value = ""
-            nom_formula = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 3, FALSE), ""))'
+            nom_formula = f'=IF(B{r_idx}=" me me","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 3, FALSE), ""))'
 
-        formula_invitacion = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 2, FALSE), "NO ENCONTRADO EN PLANTA"))'
-        formula_nivel2     = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 5, FALSE), "NO ENCONTRADO EN PLANTA"))'
-        formula_nivel3     = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 6, FALSE), "NO ENCONTRADO EN PLANTA"))'
-        formula_cargo      = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 8, FALSE), "DOCENTE / FACILITADOR"))'
-        formula_escuela    = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 9, FALSE), "GENERAL"))'
+        formula_invitacion = f'=IF(B{r_idx}=" me me","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 2, FALSE), "NO ENCONTRADO EN PLANTA"))'
+        formula_nivel2     = f'=IF(B{r_idx}=" me me","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 5, FALSE), "NO ENCONTRADO EN PLANTA"))'
+        formula_nivel3     = f'=IF(B{r_idx}=" me me","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 6, FALSE), "NO ENCONTRADO EN PLANTA"))'
+        formula_cargo      = f'=IF(B{r_idx}=" me me","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 8, FALSE), "DOCENTE / FACILITADOR"))'
+        formula_escuela    = f'=IF(B{r_idx}=" me me me","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:I, 9, FALSE), "GENERAL"))'
 
         ws.cell(row=r_idx, column=1, value=formula_invitacion)
         ws.cell(row=r_idx, column=2, value=ced_cell_value)
@@ -273,6 +273,8 @@ ws_resumen.cell(row=1, column=1, value="RESUMEN EJECUTIVO DE ASISTENCIA CUN").fo
 planta_lookup = df_planta_raw.drop_duplicates(subset=['CEDULA_CLEAN']).set_index('CEDULA_CLEAN')
 
 eval_records = []
+asistentes_data = []
+
 for idx, row in df_unicos.iterrows():
     ced = row['CEDULA']
     nom = row['NOMBRE']
@@ -296,7 +298,7 @@ for idx, row in df_unicos.iterrows():
     inv_upper = inv_val.upper()
     tipo_mod = 'PRESENCIAL' if ('PRESENCIAL' in inv_upper or 'BOGOTA' in inv_upper or 'BOGOTÁ' in inv_upper or 'SEDE' in inv_upper) else 'VIRTUAL'
 
-    eval_records.append({
+    record_dict = {
         'INVITACIÓN': inv_val,
         'CEDULA': ced,
         'NOMBRE': nom,
@@ -305,6 +307,18 @@ for idx, row in df_unicos.iterrows():
         'Descripción Cargo': car_val,
         'Nombre Centro Costo': esc_val,
         'TIPO_MODALIDAD': tipo_mod
+    }
+    eval_records.append(record_dict)
+
+    asistentes_data.append({
+        'cedula': str(ced),
+        'nombre': str(nom),
+        'escuela': str(esc_val),
+        'regional': str(reg_val),
+        'sede': str(sed_val),
+        'cargo': str(car_val),
+        'modalidad': str(tipo_mod),
+        'invitacion': str(inv_val)
     })
 
 df_eval = pd.DataFrame(eval_records)
@@ -378,19 +392,16 @@ except PermissionError:
     wb.save(alt_out)
     print(f"      Guardado exitosamente en copia alternativa: {alt_out}")
 
-# 5. Generar Tablero HTML (CON PORCENTAJE DE ASISTENCIA CALCULADO SOBRE EL TOTAL DE PLANTA)
-print("=== PREPARANDO DATOS PARA EL TABLERO HTML (PORCENTAJE RESPECTO AL TOTAL DE LA PLANTA) ===")
+# 5. Generar Tablero HTML (CON CORRECCIÓN DEL BUSCADOR DE ASISTENTES)
+print("=== PREPARANDO DATOS PARA EL TABLERO HTML (CON BUSCADOR 100% FUNCIONAL) ===")
 
 total_registros = len(df_eval)
 presencial_count = len(df_eval[df_eval['TIPO_MODALIDAD'] == 'PRESENCIAL']) if total_registros > 0 else 0
 virtual_count = len(df_eval[df_eval['TIPO_MODALIDAD'] == 'VIRTUAL']) if total_registros > 0 else 0
 
-# Porcentaje Global de Asistencia respecto al Total de la Planta
 pct_asistencia_global = round((total_registros / total_planta) * 100, 1) if total_planta > 0 else 0
-
 regional_presencial_dict = df_eval[df_eval['TIPO_MODALIDAD'] == 'PRESENCIAL']['Nombre Nivel 2'].value_counts().to_dict() if total_registros > 0 else {}
 
-# Agrupación por Escuela calculando % relativo al Total de la Planta o al Total Registros
 escuelas_data = []
 if total_registros > 0:
     for escuela, group in df_eval.groupby('Nombre Centro Costo'):
@@ -398,12 +409,20 @@ if total_registros > 0:
         p_count = len(group[group['TIPO_MODALIDAD'] == 'PRESENCIAL'])
         v_count = len(group[group['TIPO_MODALIDAD'] == 'VIRTUAL'])
         pct = round((t_count / total_registros) * 100, 1) if total_registros > 0 else 0
+        
+        regiones_presenciales = group[group['TIPO_MODALIDAD'] == 'PRESENCIAL']['Nombre Nivel 2'].value_counts().to_dict()
+        regiones_virtuales = group[group['TIPO_MODALIDAD'] == 'VIRTUAL']['Nombre Nivel 2'].value_counts().to_dict()
+        sedes_detalle = group['Nombre Nivel 3'].value_counts().to_dict()
+
         escuelas_data.append({
             'escuela': str(escuela),
             'total': t_count,
             'presencial': p_count,
             'virtual': v_count,
-            'porcentaje': pct
+            'porcentaje': pct,
+            'regiones_presencial': regiones_presenciales,
+            'regiones_virtual': regiones_virtuales,
+            'sedes': sedes_detalle
         })
 
     escuelas_data.sort(key=lambda x: x['total'], reverse=True)
@@ -461,6 +480,7 @@ html_content = f"""<!DOCTYPE html>
             padding: 2rem 1.5rem;
         }}
 
+        /* Header con Logo CUN Directo */
         header {{
             display: flex;
             justify-content: space-between;
@@ -468,8 +488,8 @@ html_content = f"""<!DOCTYPE html>
             background: var(--cun-card-bg);
             backdrop-filter: blur(16px);
             border: 1px solid var(--cun-border);
-            padding: 1.25rem 2rem;
-            border-radius: 20px;
+            padding: 1.25rem 2.25rem;
+            border-radius: 24px;
             margin-bottom: 2rem;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }}
@@ -477,24 +497,31 @@ html_content = f"""<!DOCTYPE html>
         .brand-section {{
             display: flex;
             align-items: center;
-            gap: 1.25rem;
+            gap: 1.75rem;
         }}
 
-        .brand-logo-badge {{
-            background: linear-gradient(135deg, #00A859, #00F2FE);
-            width: 54px;
-            height: 54px;
-            border-radius: 16px;
+        .brand-logo-container {{
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6rem;
-            color: #050B14;
-            box-shadow: 0 0 24px rgba(0, 242, 254, 0.4);
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            box-shadow: none;
+            backdrop-filter: none;
+        }}
+
+        .brand-logo-img {{
+            height: 75px;
+            max-width: 240px;
+            width: auto;
+            object-fit: contain;
+            filter: none;
         }}
 
         .brand-title h1 {{
-            font-size: 1.6rem;
+            font-size: 1.85rem;
             font-weight: 800;
             letter-spacing: -0.5px;
             background: linear-gradient(90deg, #FFFFFF, #00FF87);
@@ -503,8 +530,9 @@ html_content = f"""<!DOCTYPE html>
         }}
 
         .brand-title p {{
-            font-size: 0.85rem;
+            font-size: 0.95rem;
             color: var(--cun-muted);
+            margin-top: 2px;
         }}
 
         .header-actions {{
@@ -519,29 +547,29 @@ html_content = f"""<!DOCTYPE html>
             gap: 8px;
             background: rgba(0, 255, 135, 0.1);
             border: 1px solid rgba(0, 255, 135, 0.3);
-            padding: 6px 16px;
+            padding: 8px 18px;
             border-radius: 30px;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             color: var(--cun-green-glow);
-            font-weight: 600;
+            font-weight: 700;
         }}
 
         .live-dot {{
-            width: 8px;
-            height: 8px;
+            width: 9px;
+            height: 9px;
             background-color: var(--cun-green-glow);
             border-radius: 50%;
-            box-shadow: 0 0 10px var(--cun-green-glow);
+            box-shadow: 0 0 12px var(--cun-green-glow);
             animation: pulse 1.5s infinite;
         }}
 
         @keyframes pulse {{
             0% {{ transform: scale(0.95); opacity: 0.8; }}
-            50% {{ transform: scale(1.2); opacity: 1; }}
+            50% {{ transform: scale(1.25); opacity: 1; }}
             100% {{ transform: scale(0.95); opacity: 0.8; }}
         }}
 
-        /* HERO CARD PRINCIPAL: TOTAL REGISTROS ÚNICOS VÁLIDOS (TODO A LO LARGO) */
+        /* HERO CARD PRINCIPAL: TOTAL REGISTROS ÚNICOS VÁLIDOS (CON BOTÓN INTERACTIVO LISTADO COMPLETO) */
         .kpi-hero-card {{
             background: var(--cun-card-bg);
             backdrop-filter: blur(16px);
@@ -553,11 +581,33 @@ html_content = f"""<!DOCTYPE html>
             overflow: hidden;
             box-shadow: 0 12px 40px rgba(0, 168, 89, 0.15);
             transition: all 0.3s ease;
+            cursor: pointer;
         }}
 
         .kpi-hero-card:hover {{
             border-color: var(--cun-green-glow);
             box-shadow: 0 16px 50px rgba(0, 255, 135, 0.25);
+            transform: translateY(-2px);
+        }}
+
+        .kpi-hero-card::after {{
+            content: "Haz clic aquí para ver/filtrar el listado completo de asistentes ➔";
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            font-size: 0.8rem;
+            color: var(--cun-cyan);
+            font-weight: 700;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            padding: 6px 14px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }}
+
+        .kpi-hero-card:hover::after {{
+            background: rgba(0, 242, 254, 0.2);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
         }}
 
         .hero-header {{
@@ -848,18 +898,49 @@ html_content = f"""<!DOCTYPE html>
             font-size: 0.85rem;
         }}
 
+        .progress-bar-bg {{
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 6px;
+        }}
+
+        .progress-bar-fill {{
+            height: 100%;
+            background: linear-gradient(90deg, var(--cun-green), var(--cun-cyan));
+            border-radius: 20px;
+            transition: width 1s ease;
+        }}
+
         /* Item Panel Derecho: Virtual vs Presencial por Escuela */
         .escuela-card-right {{
             background: rgba(15, 23, 42, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             padding: 1.1rem;
-            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }}
 
         .escuela-card-right:hover {{
             border-color: var(--cun-cyan);
-            background: rgba(0, 242, 254, 0.06);
+            background: rgba(0, 242, 254, 0.08);
+            transform: scale(1.01);
+            box-shadow: 0 8px 24px rgba(0, 242, 254, 0.15);
+        }}
+
+        .escuela-card-right::after {{
+            content: "Ver sedes / origen ➔";
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            font-size: 0.72rem;
+            color: var(--cun-cyan);
+            opacity: 0.85;
+            font-weight: 700;
         }}
 
         .card-right-header {{
@@ -867,6 +948,7 @@ html_content = f"""<!DOCTYPE html>
             font-weight: 700;
             color: #FFFFFF;
             margin-bottom: 10px;
+            padding-right: 120px;
         }}
 
         .modalidad-breakdown {{
@@ -916,7 +998,7 @@ html_content = f"""<!DOCTYPE html>
             width: 100vw;
             height: 100vh;
             background: rgba(5, 11, 20, 0.85);
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(14px);
             z-index: 999;
             display: flex;
             align-items: center;
@@ -933,12 +1015,12 @@ html_content = f"""<!DOCTYPE html>
 
         .modal-content {{
             background: #0A1426;
-            border: 1px solid var(--cun-green);
-            width: 90%;
-            max-width: 600px;
+            border: 1px solid var(--cun-cyan);
+            width: 92%;
+            max-width: 950px;
             border-radius: 24px;
             padding: 2rem;
-            box-shadow: 0 0 50px rgba(0, 168, 89, 0.3);
+            box-shadow: 0 0 60px rgba(0, 242, 254, 0.25);
             transform: scale(0.9);
             transition: transform 0.3s ease;
         }}
@@ -957,8 +1039,8 @@ html_content = f"""<!DOCTYPE html>
         }}
 
         .modal-header h3 {{
-            font-size: 1.25rem;
-            color: var(--cun-green-glow);
+            font-size: 1.3rem;
+            color: var(--cun-cyan);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -977,11 +1059,100 @@ html_content = f"""<!DOCTYPE html>
             color: #FFFFFF;
         }}
 
+        /* ESTILOS ESPECÍFICOS DEL MODAL DE LISTADO COMPLETO DE ASISTENTES */
+        .asistentes-modal-search-wrapper {{
+            margin-bottom: 1.25rem;
+        }}
+
+        .asistentes-modal-search {{
+            position: relative;
+            width: 100%;
+        }}
+
+        .asistentes-modal-search input {{
+            width: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--cun-cyan);
+            padding: 0.85rem 1rem 0.85rem 2.8rem;
+            border-radius: 14px;
+            color: #FFFFFF;
+            font-size: 0.95rem;
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
+        }}
+
+        .asistentes-modal-search i {{
+            position: absolute;
+            left: 1.1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--cun-cyan);
+            font-size: 1rem;
+        }}
+
+        .asistentes-table-container {{
+            max-height: 480px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            background: rgba(10, 20, 38, 0.6);
+        }}
+
+        .asistentes-table {{
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }}
+
+        .asistentes-table th {{
+            background: rgba(0, 168, 89, 0.25);
+            color: var(--cun-green-glow);
+            padding: 12px 16px;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            border-bottom: 1px solid var(--cun-border);
+        }}
+
+        .asistentes-table td {{
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--cun-text);
+        }}
+
+        .asistentes-table tr:hover {{
+            background: rgba(0, 242, 254, 0.08);
+        }}
+
+        .badge-mod-presencial {{
+            background: rgba(0, 255, 135, 0.15);
+            color: var(--cun-green-glow);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.78rem;
+            display: inline-block;
+        }}
+
+        .badge-mod-virtual {{
+            background: rgba(168, 85, 247, 0.15);
+            color: #C084FC;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.78rem;
+            display: inline-block;
+        }}
+
         .regional-list {{
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            max-height: 400px;
+            max-height: 420px;
             overflow-y: auto;
             padding-right: 8px;
         }}
@@ -1000,6 +1171,9 @@ html_content = f"""<!DOCTYPE html>
             font-weight: 700;
             font-size: 0.95rem;
             color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }}
 
         .regional-badge {{
@@ -1009,6 +1183,16 @@ html_content = f"""<!DOCTYPE html>
             padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.9rem;
+        }}
+
+        .modal-sub-section {{
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--cun-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }}
 
         @media (max-width: 992px) {{
@@ -1025,8 +1209,8 @@ html_content = f"""<!DOCTYPE html>
     <div class="dashboard-container">
         <header>
             <div class="brand-section">
-                <div class="brand-logo-badge">
-                    <i class="fa-solid fa-graduation-cap"></i>
+                <div class="brand-logo-container">
+                    <img src="Logo.png" alt="Logo CUN" class="brand-logo-img">
                 </div>
                 <div class="brand-title">
                     <h1>Bienvenida Facilitadores CUN</h1>
@@ -1041,8 +1225,8 @@ html_content = f"""<!DOCTYPE html>
             </div>
         </header>
 
-        <!-- HERO CARD PRINCIPAL: TOTAL REGISTROS ÚNICOS VÁLIDOS (CON PORCENTAJE DE ASISTENCIA VS PLANTA TOTAL) -->
-        <div class="kpi-hero-card">
+        <!-- HERO CARD PRINCIPAL: TOTAL REGISTROS ÚNICOS VÁLIDOS -->
+        <div class="kpi-hero-card" id="btn-total-asistentes">
             <div class="hero-header">
                 <div class="hero-info">
                     <span class="kpi-title">TOTAL REGISTROS ÚNICOS VÁLIDOS</span>
@@ -1062,7 +1246,7 @@ html_content = f"""<!DOCTYPE html>
             </div>
         </div>
 
-        <!-- SUBGRID: ASISTENCIA PRESENCIAL Y ASISTENCIA VIRTUAL (DEBAJO) -->
+        <!-- SUBGRID: ASISTENCIA PRESENCIAL Y ASISTENCIA VIRTUAL -->
         <div class="kpi-subgrid">
             <div class="kpi-card clickable" id="btn-presencial">
                 <div class="kpi-header">
@@ -1110,7 +1294,7 @@ html_content = f"""<!DOCTYPE html>
             <div class="escuelas-panel">
                 <div class="panel-header">
                     <h3><i class="fa-solid fa-layer-group"></i> Conteo Virtual vs Presencial</h3>
-                    <span>Modalidad por Escuela</span>
+                    <span>Clic en la escuela para ver sedes/origen</span>
                 </div>
                 <div class="escuelas-list" id="escuelas-modalidades-list">
                 </div>
@@ -1118,11 +1302,47 @@ html_content = f"""<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- MODAL EMPRESARIAL PRESENCIAL POR REGIONAL -->
-    <div class="modal-overlay" id="modal-presencial">
+    <!-- MODAL PRINCIPAL 0: LISTADO COMPLETO DESPLEGABLE DE ASISTENTES ÚNICOS VÁLIDOS CON FILTRO DE BÚSQUEDA -->
+    <div class="modal-overlay" id="modal-asistentes-completos">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-map-location-dot"></i> Desglose Presencial por Regiones</h3>
+                <h3><i class="fa-solid fa-address-book" style="color: var(--cun-cyan);"></i> Listado Completo de Registros Únicos Válidos (<span id="asistentes-counter">{total_registros}</span>)</h3>
+                <button class="close-modal" id="close-asistentes-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <!-- BUSCADOR DENTRO DEL MODAL -->
+            <div class="asistentes-modal-search-wrapper">
+                <div class="asistentes-modal-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="asistentes-modal-input" placeholder="Buscar por Nombre, Cédula, Escuela, Regional o Modalidad...">
+                </div>
+            </div>
+
+            <!-- TABLA DE RESULTADOS -->
+            <div class="asistentes-table-container">
+                <table class="asistentes-table">
+                    <thead>
+                        <tr>
+                            <th>Cédula</th>
+                            <th>Nombre Completo</th>
+                            <th>Escuela / Centro Costo</th>
+                            <th>Regional</th>
+                            <th>Sede</th>
+                            <th>Modalidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="asistentes-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 1: REGIONAL GENERAL PRESENCIAL -->
+    <div class="modal-overlay" id="modal-presencial">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3 style="color: var(--cun-green-glow);"><i class="fa-solid fa-map-location-dot"></i> Desglose Presencial General por Regiones</h3>
                 <button class="close-modal" id="close-modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="regional-list" id="regional-list-content">
@@ -1130,13 +1350,182 @@ html_content = f"""<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- MODAL 2: EMERGENTE DETALLADO DE ORIGEN REGIONAL/SEDES POR ESCUELA -->
+    <div class="modal-overlay" id="modal-escuela-detalle">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3 id="escuela-modal-title"><i class="fa-solid fa-city"></i> Origen Regional por Escuela</h3>
+                <button class="close-modal" id="close-escuela-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="regional-list" id="escuela-modal-body">
+            </div>
+        </div>
+    </div>
+
     <script>
         const escuelasData = {json.dumps(escuelas_data, ensure_ascii=False)};
         const regionalPresencialData = {json.dumps(regional_presencial_dict, ensure_ascii=False)};
+        const asistentesData = {json.dumps(asistentes_data, ensure_ascii=False)};
 
         const escuelasTotalesContainer = document.getElementById('escuelas-totales-list');
         const escuelasModalidadesContainer = document.getElementById('escuelas-modalidades-list');
         const searchInput = document.getElementById('school-search');
+
+        // Modal Listado Completo Asistentes
+        const btnTotalAsistentes = document.getElementById('btn-total-asistentes');
+        const modalAsistentesCompletos = document.getElementById('modal-asistentes-completos');
+        const closeAsistentesModalBtn = document.getElementById('close-asistentes-modal');
+        const asistentesModalInput = document.getElementById('asistentes-modal-input');
+        const asistentesTableBody = document.getElementById('asistentes-table-body');
+        const asistentesCounter = document.getElementById('asistentes-counter');
+
+        function renderAsistentesModal(filterText = '') {{
+            asistentesTableBody.innerHTML = '';
+            const query = filterText ? String(filterText).toLowerCase().trim() : '';
+            
+            const filtered = asistentesData.filter(a => 
+                (a.nombre && a.nombre.toLowerCase().includes(query)) ||
+                (a.cedula && a.cedula.toLowerCase().includes(query)) ||
+                (a.escuela && a.escuela.toLowerCase().includes(query)) ||
+                (a.regional && a.regional.toLowerCase().includes(query)) ||
+                (a.modalidad && a.modalidad.toLowerCase().includes(query))
+            );
+
+            asistentesCounter.innerText = `${{filtered.length}} / ${{asistentesData.length}}`;
+
+            if (filtered.length === 0) {{
+                asistentesTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: var(--cun-muted);">No se encontraron asistentes con ese criterio de búsqueda</td></tr>';
+                return;
+            }}
+
+            filtered.forEach(item => {{
+                const tr = document.createElement('tr');
+                const badgeClass = item.modalidad === 'PRESENCIAL' ? 'badge-mod-presencial' : 'badge-mod-virtual';
+                tr.innerHTML = `
+                    <td style="font-weight:700; font-family:monospace; color:var(--cun-cyan);">${{item.cedula}}</td>
+                    <td style="font-weight:700; color:#FFFFFF;">${{item.nombre}}</td>
+                    <td>${{item.escuela}}</td>
+                    <td>${{item.regional}}</td>
+                    <td style="color:var(--cun-muted);">${{item.sede}}</td>
+                    <td><span class="${{badgeClass}}">${{item.modalidad}}</span></td>
+                `;
+                asistentesTableBody.appendChild(tr);
+            }});
+        }}
+
+        btnTotalAsistentes.addEventListener('click', () => {{
+            asistentesModalInput.value = '';
+            renderAsistentesModal();
+            modalAsistentesCompletos.classList.add('active');
+            setTimeout(() => {{
+                asistentesModalInput.focus();
+            }}, 100);
+        }});
+
+        closeAsistentesModalBtn.addEventListener('click', () => {{
+            modalAsistentesCompletos.classList.remove('active');
+        }});
+
+        modalAsistentesCompletos.addEventListener('click', (e) => {{
+            if (e.target === modalAsistentesCompletos) {{
+                modalAsistentesCompletos.classList.remove('active');
+            }}
+        }});
+
+        asistentesModalInput.addEventListener('input', (e) => {{
+            renderAsistentesModal(e.target.value);
+        }});
+
+        // Modal Detalle Escuela
+        const modalEscuelaDetalle = document.getElementById('modal-escuela-detalle');
+        const escuelaModalTitle = document.getElementById('escuela-modal-title');
+        const escuelaModalBody = document.getElementById('escuela-modal-body');
+        const closeEscuelaModalBtn = document.getElementById('close-escuela-modal');
+
+        function openEscuelaRegionalModal(item) {{
+            escuelaModalTitle.innerHTML = `<i class="fa-solid fa-city"></i> Origen Regional: ${{item.escuela}}`;
+            escuelaModalBody.innerHTML = '';
+
+            let hasData = false;
+
+            // Sub-sección 1: Regiones Presenciales
+            const presKeys = Object.keys(item.regiones_presencial || {{}});
+            if (presKeys.length > 0) {{
+                hasData = true;
+                const titleP = document.createElement('div');
+                titleP.className = 'modal-sub-section';
+                titleP.innerHTML = `<i class="fa-solid fa-location-dot" style="color: var(--cun-green-glow);"></i> Asistentes Presenciales por Región (${{item.presencial}})`;
+                escuelaModalBody.appendChild(titleP);
+
+                presKeys.forEach(reg => {{
+                    const card = document.createElement('div');
+                    card.className = 'regional-card';
+                    card.innerHTML = `
+                        <span class="regional-name"><i class="fa-solid fa-building-flag" style="color: var(--cun-green-glow);"></i> ${{reg}}</span>
+                        <span class="regional-badge">${{item.regiones_presencial[reg]}} Facilitadores</span>
+                    `;
+                    escuelaModalBody.appendChild(card);
+                }});
+            }}
+
+            // Sub-sección 2: Regiones Virtuales
+            const virtKeys = Object.keys(item.regiones_virtual || {{}});
+            if (virtKeys.length > 0) {{
+                hasData = true;
+                const titleV = document.createElement('div');
+                titleV.className = 'modal-sub-section';
+                titleV.style.marginTop = '1.25rem';
+                titleV.innerHTML = `<i class="fa-solid fa-globe" style="color: #C084FC;"></i> Conexiones Virtuales por Región (${{item.virtual}})`;
+                escuelaModalBody.appendChild(titleV);
+
+                virtKeys.forEach(reg => {{
+                    const card = document.createElement('div');
+                    card.className = 'regional-card';
+                    card.innerHTML = `
+                        <span class="regional-name"><i class="fa-solid fa-laptop" style="color: #C084FC;"></i> ${{reg}}</span>
+                        <span class="regional-badge" style="background: linear-gradient(135deg, #A855F7, #00F2FE);">${{item.regiones_virtual[reg]}} Facilitadores</span>
+                    `;
+                    escuelaModalBody.appendChild(card);
+                }});
+            }}
+
+            // Sub-sección 3: Detalle por Sedes
+            const sedesKeys = Object.keys(item.sedes || {{}});
+            if (sedesKeys.length > 0) {{
+                const titleS = document.createElement('div');
+                titleS.className = 'modal-sub-section';
+                titleS.style.marginTop = '1.25rem';
+                titleS.innerHTML = `<i class="fa-solid fa-landmark"></i> Detalle por Sedes Ubicación`;
+                escuelaModalBody.appendChild(titleS);
+
+                sedesKeys.forEach(s => {{
+                    const card = document.createElement('div');
+                    card.className = 'regional-card';
+                    card.style.background = 'rgba(255,255,255,0.03)';
+                    card.innerHTML = `
+                        <span class="regional-name" style="font-size:0.88rem;"><i class="fa-solid fa-door-open" style="color: var(--cun-cyan);"></i> ${{s}}</span>
+                        <span style="font-size:0.85rem; font-weight:700; color:var(--cun-muted);">${{item.sedes[s]}} Registros</span>
+                    `;
+                    escuelaModalBody.appendChild(card);
+                }});
+            }}
+
+            if (!hasData) {{
+                escuelaModalBody.innerHTML = '<div style="text-align:center; color:var(--cun-muted); padding:2rem;">No hay desglose regional registrado para esta escuela</div>';
+            }}
+
+            modalEscuelaDetalle.classList.add('active');
+        }}
+
+        closeEscuelaModalBtn.addEventListener('click', () => {{
+            modalEscuelaDetalle.classList.remove('active');
+        }});
+
+        modalEscuelaDetalle.addEventListener('click', (e) => {{
+            if (e.target === modalEscuelaDetalle) {{
+                modalEscuelaDetalle.classList.remove('active');
+            }}
+        }});
 
         function renderEscuelas(filterText = '') {{
             escuelasTotalesContainer.innerHTML = '';
@@ -1182,6 +1571,11 @@ html_content = f"""<!DOCTYPE html>
                         </div>
                     </div>
                 `;
+
+                cardRight.addEventListener('click', () => {{
+                    openEscuelaRegionalModal(item);
+                }});
+
                 escuelasModalidadesContainer.appendChild(cardRight);
             }});
         }}
@@ -1207,7 +1601,7 @@ html_content = f"""<!DOCTYPE html>
                     const card = document.createElement('div');
                     card.className = 'regional-card';
                     card.innerHTML = `
-                        <span class="regional-name">${{reg}}</span>
+                        <span class="regional-name"><i class="fa-solid fa-building-flag" style="color:var(--cun-green-glow);"></i> ${{reg}}</span>
                         <span class="regional-badge">${{regionalPresencialData[reg]}} Facilitadores</span>
                     `;
                     regionalListContent.appendChild(card);

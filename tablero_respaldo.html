@@ -51,6 +51,7 @@
             padding: 2rem 1.5rem;
         }
 
+        /* Header con Logo CUN Directo */
         header {
             display: flex;
             justify-content: space-between;
@@ -58,8 +59,8 @@
             background: var(--cun-card-bg);
             backdrop-filter: blur(16px);
             border: 1px solid var(--cun-border);
-            padding: 1.25rem 2rem;
-            border-radius: 20px;
+            padding: 1.25rem 2.25rem;
+            border-radius: 24px;
             margin-bottom: 2rem;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         }
@@ -67,24 +68,31 @@
         .brand-section {
             display: flex;
             align-items: center;
-            gap: 1.25rem;
+            gap: 1.75rem;
         }
 
-        .brand-logo-badge {
-            background: linear-gradient(135deg, #00A859, #00F2FE);
-            width: 54px;
-            height: 54px;
-            border-radius: 16px;
+        .brand-logo-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6rem;
-            color: #050B14;
-            box-shadow: 0 0 24px rgba(0, 242, 254, 0.4);
+            background: none;
+            border: none;
+            padding: 0;
+            margin: 0;
+            box-shadow: none;
+            backdrop-filter: none;
+        }
+
+        .brand-logo-img {
+            height: 75px;
+            max-width: 240px;
+            width: auto;
+            object-fit: contain;
+            filter: none;
         }
 
         .brand-title h1 {
-            font-size: 1.6rem;
+            font-size: 1.85rem;
             font-weight: 800;
             letter-spacing: -0.5px;
             background: linear-gradient(90deg, #FFFFFF, #00FF87);
@@ -93,8 +101,9 @@
         }
 
         .brand-title p {
-            font-size: 0.85rem;
+            font-size: 0.95rem;
             color: var(--cun-muted);
+            margin-top: 2px;
         }
 
         .header-actions {
@@ -109,29 +118,29 @@
             gap: 8px;
             background: rgba(0, 255, 135, 0.1);
             border: 1px solid rgba(0, 255, 135, 0.3);
-            padding: 6px 16px;
+            padding: 8px 18px;
             border-radius: 30px;
-            font-size: 0.8rem;
+            font-size: 0.85rem;
             color: var(--cun-green-glow);
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .live-dot {
-            width: 8px;
-            height: 8px;
+            width: 9px;
+            height: 9px;
             background-color: var(--cun-green-glow);
             border-radius: 50%;
-            box-shadow: 0 0 10px var(--cun-green-glow);
+            box-shadow: 0 0 12px var(--cun-green-glow);
             animation: pulse 1.5s infinite;
         }
 
         @keyframes pulse {
             0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; }
+            50% { transform: scale(1.25); opacity: 1; }
             100% { transform: scale(0.95); opacity: 0.8; }
         }
 
-        /* HERO CARD PRINCIPAL: TOTAL REGISTROS ÚNICOS VÁLIDOS (TODO A LO LARGO) */
+        /* HERO CARD PRINCIPAL: TOTAL REGISTROS ÚNICOS VÁLIDOS (CON BOTÓN INTERACTIVO LISTADO COMPLETO) */
         .kpi-hero-card {
             background: var(--cun-card-bg);
             backdrop-filter: blur(16px);
@@ -143,11 +152,33 @@
             overflow: hidden;
             box-shadow: 0 12px 40px rgba(0, 168, 89, 0.15);
             transition: all 0.3s ease;
+            cursor: pointer;
         }
 
         .kpi-hero-card:hover {
             border-color: var(--cun-green-glow);
             box-shadow: 0 16px 50px rgba(0, 255, 135, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .kpi-hero-card::after {
+            content: "Haz clic aquí para ver/filtrar el listado completo de asistentes ➔";
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            font-size: 0.8rem;
+            color: var(--cun-cyan);
+            font-weight: 700;
+            background: rgba(0, 242, 254, 0.1);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            padding: 6px 14px;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .kpi-hero-card:hover::after {
+            background: rgba(0, 242, 254, 0.2);
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
         }
 
         .hero-header {
@@ -210,7 +241,7 @@
 
         .hero-progress-fill {
             height: 100%;
-            width: 0.0%;
+            width: 2.9%;
             min-width: 2%;
             background: linear-gradient(90deg, #00A859, #00FF87, #00F2FE);
             background-size: 200% 100%;
@@ -438,18 +469,49 @@
             font-size: 0.85rem;
         }
 
+        .progress-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cun-green), var(--cun-cyan));
+            border-radius: 20px;
+            transition: width 1s ease;
+        }
+
         /* Item Panel Derecho: Virtual vs Presencial por Escuela */
         .escuela-card-right {
             background: rgba(15, 23, 42, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             padding: 1.1rem;
-            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .escuela-card-right:hover {
             border-color: var(--cun-cyan);
-            background: rgba(0, 242, 254, 0.06);
+            background: rgba(0, 242, 254, 0.08);
+            transform: scale(1.01);
+            box-shadow: 0 8px 24px rgba(0, 242, 254, 0.15);
+        }
+
+        .escuela-card-right::after {
+            content: "Ver sedes / origen ➔";
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            font-size: 0.72rem;
+            color: var(--cun-cyan);
+            opacity: 0.85;
+            font-weight: 700;
         }
 
         .card-right-header {
@@ -457,6 +519,7 @@
             font-weight: 700;
             color: #FFFFFF;
             margin-bottom: 10px;
+            padding-right: 120px;
         }
 
         .modalidad-breakdown {
@@ -506,7 +569,7 @@
             width: 100vw;
             height: 100vh;
             background: rgba(5, 11, 20, 0.85);
-            backdrop-filter: blur(12px);
+            backdrop-filter: blur(14px);
             z-index: 999;
             display: flex;
             align-items: center;
@@ -523,12 +586,12 @@
 
         .modal-content {
             background: #0A1426;
-            border: 1px solid var(--cun-green);
-            width: 90%;
-            max-width: 600px;
+            border: 1px solid var(--cun-cyan);
+            width: 92%;
+            max-width: 950px;
             border-radius: 24px;
             padding: 2rem;
-            box-shadow: 0 0 50px rgba(0, 168, 89, 0.3);
+            box-shadow: 0 0 60px rgba(0, 242, 254, 0.25);
             transform: scale(0.9);
             transition: transform 0.3s ease;
         }
@@ -547,8 +610,8 @@
         }
 
         .modal-header h3 {
-            font-size: 1.25rem;
-            color: var(--cun-green-glow);
+            font-size: 1.3rem;
+            color: var(--cun-cyan);
             display: flex;
             align-items: center;
             gap: 10px;
@@ -567,11 +630,100 @@
             color: #FFFFFF;
         }
 
+        /* ESTILOS ESPECÍFICOS DEL MODAL DE LISTADO COMPLETO DE ASISTENTES */
+        .asistentes-modal-search-wrapper {
+            margin-bottom: 1.25rem;
+        }
+
+        .asistentes-modal-search {
+            position: relative;
+            width: 100%;
+        }
+
+        .asistentes-modal-search input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--cun-cyan);
+            padding: 0.85rem 1rem 0.85rem 2.8rem;
+            border-radius: 14px;
+            color: #FFFFFF;
+            font-size: 0.95rem;
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
+        }
+
+        .asistentes-modal-search i {
+            position: absolute;
+            left: 1.1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--cun-cyan);
+            font-size: 1rem;
+        }
+
+        .asistentes-table-container {
+            max-height: 480px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            background: rgba(10, 20, 38, 0.6);
+        }
+
+        .asistentes-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+
+        .asistentes-table th {
+            background: rgba(0, 168, 89, 0.25);
+            color: var(--cun-green-glow);
+            padding: 12px 16px;
+            font-weight: 700;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            border-bottom: 1px solid var(--cun-border);
+        }
+
+        .asistentes-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--cun-text);
+        }
+
+        .asistentes-table tr:hover {
+            background: rgba(0, 242, 254, 0.08);
+        }
+
+        .badge-mod-presencial {
+            background: rgba(0, 255, 135, 0.15);
+            color: var(--cun-green-glow);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.78rem;
+            display: inline-block;
+        }
+
+        .badge-mod-virtual {
+            background: rgba(168, 85, 247, 0.15);
+            color: #C084FC;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.78rem;
+            display: inline-block;
+        }
+
         .regional-list {
             display: flex;
             flex-direction: column;
             gap: 1rem;
-            max-height: 400px;
+            max-height: 420px;
             overflow-y: auto;
             padding-right: 8px;
         }
@@ -590,6 +742,9 @@
             font-weight: 700;
             font-size: 0.95rem;
             color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .regional-badge {
@@ -599,6 +754,16 @@
             padding: 6px 16px;
             border-radius: 20px;
             font-size: 0.9rem;
+        }
+
+        .modal-sub-section {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--cun-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         @media (max-width: 992px) {
@@ -615,8 +780,8 @@
     <div class="dashboard-container">
         <header>
             <div class="brand-section">
-                <div class="brand-logo-badge">
-                    <i class="fa-solid fa-graduation-cap"></i>
+                <div class="brand-logo-container">
+                    <img src="Logo.png" alt="Logo CUN" class="brand-logo-img">
                 </div>
                 <div class="brand-title">
                     <h1>Bienvenida Facilitadores CUN</h1>
@@ -631,20 +796,20 @@
             </div>
         </header>
 
-        <!-- HERO CARD PRINCIPAL: TOTAL REGISTROS ÚNICOS VÁLIDOS (CON PORCENTAJE DE ASISTENCIA VS PLANTA TOTAL) -->
-        <div class="kpi-hero-card">
+        <!-- HERO CARD PRINCIPAL: TOTAL REGISTROS ÚNICOS VÁLIDOS -->
+        <div class="kpi-hero-card" id="btn-total-asistentes">
             <div class="hero-header">
                 <div class="hero-info">
                     <span class="kpi-title">TOTAL REGISTROS ÚNICOS VÁLIDOS</span>
-                    <div class="kpi-value" id="kpi-total">0</div>
+                    <div class="kpi-value" id="kpi-total">35</div>
                     <div class="kpi-subtext">Facilitadores validados en Planta (excluye duplicados)</div>
                 </div>
                 <div class="kpi-icon icon-total"><i class="fa-solid fa-users"></i></div>
             </div>
             <div class="hero-progress-wrapper">
                 <div class="hero-progress-meta">
-                    <span>PORCENTAJE DE ASISTENCIA SOBRE LA PLANTA TOTAL (0 / 1188 FACILITADORES)</span>
-                    <span class="highlight">0.0%</span>
+                    <span>PORCENTAJE DE ASISTENCIA SOBRE LA PLANTA TOTAL (35 / 1188 FACILITADORES)</span>
+                    <span class="highlight">2.9%</span>
                 </div>
                 <div class="hero-progress-bg">
                     <div class="hero-progress-fill"></div>
@@ -652,14 +817,14 @@
             </div>
         </div>
 
-        <!-- SUBGRID: ASISTENCIA PRESENCIAL Y ASISTENCIA VIRTUAL (DEBAJO) -->
+        <!-- SUBGRID: ASISTENCIA PRESENCIAL Y ASISTENCIA VIRTUAL -->
         <div class="kpi-subgrid">
             <div class="kpi-card clickable" id="btn-presencial">
                 <div class="kpi-header">
                     <span class="kpi-title">ASISTENCIA PRESENCIAL</span>
                     <div class="kpi-icon icon-presencial"><i class="fa-solid fa-building-user"></i></div>
                 </div>
-                <div class="kpi-value" style="color: var(--cun-green-glow);">0</div>
+                <div class="kpi-value" style="color: var(--cun-green-glow);">26</div>
                 <div class="kpi-subtext">Asistentes presenciales validados</div>
             </div>
 
@@ -668,7 +833,7 @@
                     <span class="kpi-title">ASISTENCIA VIRTUAL</span>
                     <div class="kpi-icon icon-virtual"><i class="fa-solid fa-laptop-code"></i></div>
                 </div>
-                <div class="kpi-value" style="color: #C084FC;">0</div>
+                <div class="kpi-value" style="color: #C084FC;">9</div>
                 <div class="kpi-subtext">Conexiones virtuales validadas</div>
             </div>
         </div>
@@ -700,7 +865,7 @@
             <div class="escuelas-panel">
                 <div class="panel-header">
                     <h3><i class="fa-solid fa-layer-group"></i> Conteo Virtual vs Presencial</h3>
-                    <span>Modalidad por Escuela</span>
+                    <span>Clic en la escuela para ver sedes/origen</span>
                 </div>
                 <div class="escuelas-list" id="escuelas-modalidades-list">
                 </div>
@@ -708,11 +873,47 @@
         </div>
     </div>
 
-    <!-- MODAL EMPRESARIAL PRESENCIAL POR REGIONAL -->
-    <div class="modal-overlay" id="modal-presencial">
+    <!-- MODAL PRINCIPAL 0: LISTADO COMPLETO DESPLEGABLE DE ASISTENTES ÚNICOS VÁLIDOS CON FILTRO DE BÚSQUEDA -->
+    <div class="modal-overlay" id="modal-asistentes-completos">
         <div class="modal-content">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-map-location-dot"></i> Desglose Presencial por Regiones</h3>
+                <h3><i class="fa-solid fa-address-book" style="color: var(--cun-cyan);"></i> Listado Completo de Registros Únicos Válidos (<span id="asistentes-counter">35</span>)</h3>
+                <button class="close-modal" id="close-asistentes-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <!-- BUSCADOR DENTRO DEL MODAL -->
+            <div class="asistentes-modal-search-wrapper">
+                <div class="asistentes-modal-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="asistentes-modal-input" placeholder="Buscar por Nombre, Cédula, Escuela, Regional o Modalidad...">
+                </div>
+            </div>
+
+            <!-- TABLA DE RESULTADOS -->
+            <div class="asistentes-table-container">
+                <table class="asistentes-table">
+                    <thead>
+                        <tr>
+                            <th>Cédula</th>
+                            <th>Nombre Completo</th>
+                            <th>Escuela / Centro Costo</th>
+                            <th>Regional</th>
+                            <th>Sede</th>
+                            <th>Modalidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="asistentes-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 1: REGIONAL GENERAL PRESENCIAL -->
+    <div class="modal-overlay" id="modal-presencial">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3 style="color: var(--cun-green-glow);"><i class="fa-solid fa-map-location-dot"></i> Desglose Presencial General por Regiones</h3>
                 <button class="close-modal" id="close-modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="regional-list" id="regional-list-content">
@@ -720,13 +921,182 @@
         </div>
     </div>
 
+    <!-- MODAL 2: EMERGENTE DETALLADO DE ORIGEN REGIONAL/SEDES POR ESCUELA -->
+    <div class="modal-overlay" id="modal-escuela-detalle">
+        <div class="modal-content" style="max-width: 650px;">
+            <div class="modal-header">
+                <h3 id="escuela-modal-title"><i class="fa-solid fa-city"></i> Origen Regional por Escuela</h3>
+                <button class="close-modal" id="close-escuela-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="regional-list" id="escuela-modal-body">
+            </div>
+        </div>
+    </div>
+
     <script>
-        const escuelasData = [];
-        const regionalPresencialData = {};
+        const escuelasData = [{"escuela": "INVESTIGACIONES", "total": 8, "presencial": 6, "virtual": 2, "porcentaje": 22.9, "regiones_presencial": {"REGIONAL BOGOTA": 6}, "regiones_virtual": {"REGIONAL BOYACA": 1, "REGIONAL SANTANDER": 1}, "sedes": {"BOGOTA CENTRO": 5, "TUNJA": 1, "BOGOTA NORTE": 1, "BUCARAMANGA": 1}}, {"escuela": "DISENO GRAFICO", "total": 6, "presencial": 4, "virtual": 2, "porcentaje": 17.1, "regiones_presencial": {"REGIONAL BOGOTA": 3, "REGIONAL TOLIMA": 1}, "regiones_virtual": {"REGIONAL MAGDALENA": 2}, "sedes": {"BOGOTA CENTRO": 3, "SANTA MARTA": 2, "IBAGUE": 1}}, {"escuela": "EMPRENDIMIENTO", "total": 6, "presencial": 4, "virtual": 2, "porcentaje": 17.1, "regiones_presencial": {"REGIONAL BOGOTA": 2, "REGIONAL SUCRE": 1, "REGIONAL ATLANTICO": 1}, "regiones_virtual": {"REGIONAL QUINDIO": 1, "REGIONAL MAGDALENA": 1}, "sedes": {"BOGOTA CENTRO": 2, "ARMENIA": 1, "SANTA MARTA": 1, "SINCELEJO": 1, "BARRANQUILLA": 1}}, {"escuela": "CIENCIAS BASICAS", "total": 2, "presencial": 2, "virtual": 0, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL BOGOTA": 2}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 2}}, {"escuela": "COMUNICACION SOCIAL Y PERIODISMO", "total": 2, "presencial": 2, "virtual": 0, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL TOLIMA": 1, "REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"IBAGUE": 1, "BOGOTA CENTRO": 1}}, {"escuela": "CONTADURIA PUBLICA", "total": 2, "presencial": 1, "virtual": 1, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL CORDOBA": 1}, "regiones_virtual": {"REGIONAL NARINO": 1}, "sedes": {"MONTERIA": 1, "IPIALES": 1}}, {"escuela": "DISENO Y PRODUCCION DE MODAS", "total": 2, "presencial": 1, "virtual": 1, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {"REGIONAL MAGDALENA": 1}, "sedes": {"BOGOTA CENTRO": 1, "SANTA MARTA": 1}}, {"escuela": "IDIOMAS", "total": 2, "presencial": 1, "virtual": 1, "porcentaje": 5.7, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {"REGIONAL SANTANDER": 1}, "sedes": {"BUCARAMANGA": 1, "BOGOTA CENTRO": 1}}, {"escuela": "DIRECCION Y PRODUCCION DE MEDIOS AUDIOVISUALES", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 1}}, {"escuela": "ESPECIALIZACION EN PROSPECTIVA ESTRATEGICA", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 1}}, {"escuela": "ESPECIALIZACION EN SEGURIDAD Y SALUD EN EL TRABAJO", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 1}}, {"escuela": "MARKETING DIGITAL", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL SUCRE": 1}, "regiones_virtual": {}, "sedes": {"SINCELEJO": 1}}, {"escuela": "PUBLICIDAD Y MERCADEO", "total": 1, "presencial": 1, "virtual": 0, "porcentaje": 2.9, "regiones_presencial": {"REGIONAL BOGOTA": 1}, "regiones_virtual": {}, "sedes": {"BOGOTA CENTRO": 1}}];
+        const regionalPresencialData = {"REGIONAL BOGOTA": 20, "REGIONAL SUCRE": 2, "REGIONAL TOLIMA": 2, "REGIONAL CORDOBA": 1, "REGIONAL ATLANTICO": 1};
+        const asistentesData = [{"cedula": "79218737", "nombre": "OSCAR JAVIER MORENO MARTINEZ", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL QUINDIO", "sede": "ARMENIA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/PROYECCION", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "53133811", "nombre": "DIANA CAROLINA POLO RAMOS", "escuela": "DISENO GRAFICO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1083001191", "nombre": "LADY MARIANE FONTALVO TOLOSA", "escuela": "DISENO GRAFICO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1005570324", "nombre": "DANIELA ANDREA MARTINEZ ESPANA", "escuela": "MARKETING DIGITAL", "regional": "REGIONAL SUCRE", "sede": "SINCELEJO", "cargo": "DOC AUX T&T/N/MT/MAR DIG", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "1032451810", "nombre": "SERGIO IVAN ALBARRACIN SANCHEZ", "escuela": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1098750510", "nombre": "NELLY JOHANA ALVAREZ IDARRAGA", "escuela": "IDIOMAS", "regional": "REGIONAL SANTANDER", "sede": "BUCARAMANGA", "cargo": "DOC ASIS/N/V/TC/IDIOMAS/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "80099466", "nombre": "ALBYN FABIAN LEON BAQUERO", "escuela": "PUBLICIDAD Y MERCADEO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC TITULAR/N/V/MT/PUB Y MERC", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "80186209", "nombre": "MICHEL FEDERICO BUSTOS ROMERO", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/INVESTIGACIONES/INVESTIG", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "52412273", "nombre": "MELVY CRISTIANI RIVERA", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/TC/EMPRENDIMIENTO/PROYECTOS A", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1020752802", "nombre": "CRISTOBAL GOMEZ REINA", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "78024830", "nombre": "EMERSON MANUEL CASTANO PATERNINA", "escuela": "CONTADURIA PUBLICA", "regional": "REGIONAL CORDOBA", "sede": "MONTERIA", "cargo": "DOCENTE ASIS/N/TC/CONT PUBL/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "7175280", "nombre": "JULIO CESAR PACHON EUGENIO", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOYACA", "sede": "TUNJA", "cargo": "DOC AUX/N/V/TC/INVESTIGACIONES/INVESTIGACI", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1032363391", "nombre": "JENNY ROCIO HERNANDEZ FLOREZ", "escuela": "DISENO Y PRODUCCION DE MODAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/DIS PROD MOD/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "79955605", "nombre": "RAFAEL FRANCISCO DIAZ VASQUEZ", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA NORTE", "cargo": "DOC AUX T&T/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1019066088", "nombre": "DIEGO FERNANDO DELGADO CUELLAR", "escuela": "DIRECCION Y PRODUCCION DE MEDIOS AUDIOVISUALES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/V/TC/DIR PROD ME AUD/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1013591700", "nombre": "JOHNY ANDRES JARAMILLO PALACIO", "escuela": "CIENCIAS BASICAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/CIENCIAS BASI/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "53044000", "nombre": "KELLY JOHANNA SIERRA RODRIGUEZ", "escuela": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1020788193", "nombre": "DANIEL FELIPE BELTRAN JIMENEZ", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1085920254", "nombre": "JANETH CRISTINA MENDEZ ROSERO", "escuela": "CONTADURIA PUBLICA", "regional": "REGIONAL NARINO", "sede": "IPIALES", "cargo": "DOC AUX/N/V/MT/CONTADURIA", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1032415074", "nombre": "GIOVANNY ROBLEDO VILLANUEVA", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/INVESTIGA/INVESTIGACIO", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "80882570", "nombre": "ANDRES ALBERTO GARRIDO TORRES", "escuela": "IDIOMAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/IDIOMAS/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "52365713", "nombre": "ERIKA ROCIO ROMERO ORJUELA", "escuela": "DISENO GRAFICO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX T&T/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1010229459", "nombre": "JUAN CAMILO BOHORQUEZ VIVAS", "escuela": "COMUNICACION SOCIAL Y PERIODISMO", "regional": "REGIONAL TOLIMA", "sede": "IBAGUE", "cargo": "DOCENTE ASIS/N/TC/COM SOC Y PER/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "1082931770", "nombre": "JUAN LUIS CAMARGO GRANADOS", "escuela": "COMUNICACION SOCIAL Y PERIODISMO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/COM SOC Y PER/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1121835674", "nombre": "JHON ARLEY PARRADO ARENAS", "escuela": "DISENO GRAFICO", "regional": "REGIONAL TOLIMA", "sede": "IBAGUE", "cargo": "DOCENTE AUX/N/TC/DIS GRAFICO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "60364287", "nombre": "ALEJANDRINA RINCON ACEVEDO", "escuela": "DISENO Y PRODUCCION DE MODAS", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOC AUX T&T/N/TC/DIS PROD MOD/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "7630409", "nombre": "JOSE RAFAEL DAVILA FERNANDEZ", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL MAGDALENA", "sede": "SANTA MARTA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}, {"cedula": "1075667294", "nombre": "CHRISTIAN DAVID RAMIREZ RUBIANO", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE AUX/N/TC/INVESTIGA/INVESTIGACION", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "65786864", "nombre": "YAMILE MEDINA CASTANEDA", "escuela": "CIENCIAS BASICAS", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOCENTE ASIS/N/TC/CIEN BASI/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1102860563", "nombre": "RAFAEL EDUARDO PATERNINA DIAZ", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL SUCRE", "sede": "SINCELEJO", "cargo": "DOC ASIS/N/V/TC/EMPRENDIMIENTO/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "52542490", "nombre": "CAROLL ALEAN MAHECHA", "escuela": "ESPECIALIZACION EN PROSPECTIVA ESTRATEGICA", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/ESP PROSP ESTR/PROYECC", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1013587134", "nombre": "CLAUDIA MILENA OSPINA LOPEZ", "escuela": "ESPECIALIZACION EN SEGURIDAD Y SALUD EN EL TRABAJO", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC ASIS/N/V/TC/ESP SEG SALUD TRAB/FUN.A", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "8642585", "nombre": "JUAN CARLOS HERRERA ESTRADA", "escuela": "INVESTIGACIONES", "regional": "REGIONAL BOGOTA", "sede": "BOGOTA CENTRO", "cargo": "DOC AUX/N/V/TC/INVESTIGACIONES/INVESTIGACI", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL BOGOTA"}, {"cedula": "1140863887", "nombre": "NICOLE NATHALY ARROYO SANCHEZ", "escuela": "EMPRENDIMIENTO", "regional": "REGIONAL ATLANTICO", "sede": "BARRANQUILLA", "cargo": "DOCENTE AUX/N/TC/EMPRENDIMIE/FUN.ACADE-ADMIN", "modalidad": "PRESENCIAL", "invitacion": "PRESENCIAL REGIONAL"}, {"cedula": "88209112", "nombre": "WILSON BONILLA PABON", "escuela": "INVESTIGACIONES", "regional": "REGIONAL SANTANDER", "sede": "BUCARAMANGA", "cargo": "DOC TITULAR/N/V/TC/INVESTIGACIONES/INVESTI", "modalidad": "VIRTUAL", "invitacion": "VIRTUAL"}];
 
         const escuelasTotalesContainer = document.getElementById('escuelas-totales-list');
         const escuelasModalidadesContainer = document.getElementById('escuelas-modalidades-list');
         const searchInput = document.getElementById('school-search');
+
+        // Modal Listado Completo Asistentes
+        const btnTotalAsistentes = document.getElementById('btn-total-asistentes');
+        const modalAsistentesCompletos = document.getElementById('modal-asistentes-completos');
+        const closeAsistentesModalBtn = document.getElementById('close-asistentes-modal');
+        const asistentesModalInput = document.getElementById('asistentes-modal-input');
+        const asistentesTableBody = document.getElementById('asistentes-table-body');
+        const asistentesCounter = document.getElementById('asistentes-counter');
+
+        function renderAsistentesModal(filterText = '') {
+            asistentesTableBody.innerHTML = '';
+            const query = filterText ? String(filterText).toLowerCase().trim() : '';
+            
+            const filtered = asistentesData.filter(a => 
+                (a.nombre && a.nombre.toLowerCase().includes(query)) ||
+                (a.cedula && a.cedula.toLowerCase().includes(query)) ||
+                (a.escuela && a.escuela.toLowerCase().includes(query)) ||
+                (a.regional && a.regional.toLowerCase().includes(query)) ||
+                (a.modalidad && a.modalidad.toLowerCase().includes(query))
+            );
+
+            asistentesCounter.innerText = `${filtered.length} / ${asistentesData.length}`;
+
+            if (filtered.length === 0) {
+                asistentesTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem; color: var(--cun-muted);">No se encontraron asistentes con ese criterio de búsqueda</td></tr>';
+                return;
+            }
+
+            filtered.forEach(item => {
+                const tr = document.createElement('tr');
+                const badgeClass = item.modalidad === 'PRESENCIAL' ? 'badge-mod-presencial' : 'badge-mod-virtual';
+                tr.innerHTML = `
+                    <td style="font-weight:700; font-family:monospace; color:var(--cun-cyan);">${item.cedula}</td>
+                    <td style="font-weight:700; color:#FFFFFF;">${item.nombre}</td>
+                    <td>${item.escuela}</td>
+                    <td>${item.regional}</td>
+                    <td style="color:var(--cun-muted);">${item.sede}</td>
+                    <td><span class="${badgeClass}">${item.modalidad}</span></td>
+                `;
+                asistentesTableBody.appendChild(tr);
+            });
+        }
+
+        btnTotalAsistentes.addEventListener('click', () => {
+            asistentesModalInput.value = '';
+            renderAsistentesModal();
+            modalAsistentesCompletos.classList.add('active');
+            setTimeout(() => {
+                asistentesModalInput.focus();
+            }, 100);
+        });
+
+        closeAsistentesModalBtn.addEventListener('click', () => {
+            modalAsistentesCompletos.classList.remove('active');
+        });
+
+        modalAsistentesCompletos.addEventListener('click', (e) => {
+            if (e.target === modalAsistentesCompletos) {
+                modalAsistentesCompletos.classList.remove('active');
+            }
+        });
+
+        asistentesModalInput.addEventListener('input', (e) => {
+            renderAsistentesModal(e.target.value);
+        });
+
+        // Modal Detalle Escuela
+        const modalEscuelaDetalle = document.getElementById('modal-escuela-detalle');
+        const escuelaModalTitle = document.getElementById('escuela-modal-title');
+        const escuelaModalBody = document.getElementById('escuela-modal-body');
+        const closeEscuelaModalBtn = document.getElementById('close-escuela-modal');
+
+        function openEscuelaRegionalModal(item) {
+            escuelaModalTitle.innerHTML = `<i class="fa-solid fa-city"></i> Origen Regional: ${item.escuela}`;
+            escuelaModalBody.innerHTML = '';
+
+            let hasData = false;
+
+            // Sub-sección 1: Regiones Presenciales
+            const presKeys = Object.keys(item.regiones_presencial || {});
+            if (presKeys.length > 0) {
+                hasData = true;
+                const titleP = document.createElement('div');
+                titleP.className = 'modal-sub-section';
+                titleP.innerHTML = `<i class="fa-solid fa-location-dot" style="color: var(--cun-green-glow);"></i> Asistentes Presenciales por Región (${item.presencial})`;
+                escuelaModalBody.appendChild(titleP);
+
+                presKeys.forEach(reg => {
+                    const card = document.createElement('div');
+                    card.className = 'regional-card';
+                    card.innerHTML = `
+                        <span class="regional-name"><i class="fa-solid fa-building-flag" style="color: var(--cun-green-glow);"></i> ${reg}</span>
+                        <span class="regional-badge">${item.regiones_presencial[reg]} Facilitadores</span>
+                    `;
+                    escuelaModalBody.appendChild(card);
+                });
+            }
+
+            // Sub-sección 2: Regiones Virtuales
+            const virtKeys = Object.keys(item.regiones_virtual || {});
+            if (virtKeys.length > 0) {
+                hasData = true;
+                const titleV = document.createElement('div');
+                titleV.className = 'modal-sub-section';
+                titleV.style.marginTop = '1.25rem';
+                titleV.innerHTML = `<i class="fa-solid fa-globe" style="color: #C084FC;"></i> Conexiones Virtuales por Región (${item.virtual})`;
+                escuelaModalBody.appendChild(titleV);
+
+                virtKeys.forEach(reg => {
+                    const card = document.createElement('div');
+                    card.className = 'regional-card';
+                    card.innerHTML = `
+                        <span class="regional-name"><i class="fa-solid fa-laptop" style="color: #C084FC;"></i> ${reg}</span>
+                        <span class="regional-badge" style="background: linear-gradient(135deg, #A855F7, #00F2FE);">${item.regiones_virtual[reg]} Facilitadores</span>
+                    `;
+                    escuelaModalBody.appendChild(card);
+                });
+            }
+
+            // Sub-sección 3: Detalle por Sedes
+            const sedesKeys = Object.keys(item.sedes || {});
+            if (sedesKeys.length > 0) {
+                const titleS = document.createElement('div');
+                titleS.className = 'modal-sub-section';
+                titleS.style.marginTop = '1.25rem';
+                titleS.innerHTML = `<i class="fa-solid fa-landmark"></i> Detalle por Sedes Ubicación`;
+                escuelaModalBody.appendChild(titleS);
+
+                sedesKeys.forEach(s => {
+                    const card = document.createElement('div');
+                    card.className = 'regional-card';
+                    card.style.background = 'rgba(255,255,255,0.03)';
+                    card.innerHTML = `
+                        <span class="regional-name" style="font-size:0.88rem;"><i class="fa-solid fa-door-open" style="color: var(--cun-cyan);"></i> ${s}</span>
+                        <span style="font-size:0.85rem; font-weight:700; color:var(--cun-muted);">${item.sedes[s]} Registros</span>
+                    `;
+                    escuelaModalBody.appendChild(card);
+                });
+            }
+
+            if (!hasData) {
+                escuelaModalBody.innerHTML = '<div style="text-align:center; color:var(--cun-muted); padding:2rem;">No hay desglose regional registrado para esta escuela</div>';
+            }
+
+            modalEscuelaDetalle.classList.add('active');
+        }
+
+        closeEscuelaModalBtn.addEventListener('click', () => {
+            modalEscuelaDetalle.classList.remove('active');
+        });
+
+        modalEscuelaDetalle.addEventListener('click', (e) => {
+            if (e.target === modalEscuelaDetalle) {
+                modalEscuelaDetalle.classList.remove('active');
+            }
+        });
 
         function renderEscuelas(filterText = '') {
             escuelasTotalesContainer.innerHTML = '';
@@ -772,6 +1142,11 @@
                         </div>
                     </div>
                 `;
+
+                cardRight.addEventListener('click', () => {
+                    openEscuelaRegionalModal(item);
+                });
+
                 escuelasModalidadesContainer.appendChild(cardRight);
             });
         }
@@ -797,7 +1172,7 @@
                     const card = document.createElement('div');
                     card.className = 'regional-card';
                     card.innerHTML = `
-                        <span class="regional-name">${reg}</span>
+                        <span class="regional-name"><i class="fa-solid fa-building-flag" style="color:var(--cun-green-glow);"></i> ${reg}</span>
                         <span class="regional-badge">${regionalPresencialData[reg]} Facilitadores</span>
                     `;
                     regionalListContent.appendChild(card);
