@@ -183,6 +183,9 @@ headers_consolidado = [
     'ESCUELA'
 ]
 
+last_col_letter = get_column_letter(len(df_planta_export.columns))
+escuela_col_idx = (df_planta_export.columns.get_loc(col_escuela) + 1) if col_escuela in df_planta_export.columns else 17
+
 def format_consolidado_with_full_column_formulas(ws, df_asist_data):
     ws.views.sheetView[0].showGridLines = True
     ws.append(headers_consolidado)
@@ -205,14 +208,14 @@ def format_consolidado_with_full_column_formulas(ws, df_asist_data):
             nom_formula = str(row_data.NOMBRE)
         else:
             ced_cell_value = ""
-            nom_formula = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 3, FALSE), ""))'
+            nom_formula = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:{last_col_letter}, 3, FALSE), ""))'
 
-        formula_invitacion = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 2, FALSE), "NO ENCONTRADO EN PLANTA"))'
-        formula_nivel2     = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 5, FALSE), "NO ENCONTRADO EN PLANTA"))'
-        formula_nivel3     = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 6, FALSE), "NO ENCONTRADO EN PLANTA"))'
-        formula_cargo      = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 8, FALSE), "DOCENTE / FACILITADOR"))'
-        formula_centro_costo = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 9, FALSE), "GENERAL"))'
-        formula_escuela    = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:Q, 17, FALSE), "GENERAL"))'
+        formula_invitacion = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:{last_col_letter}, 2, FALSE), "NO ENCONTRADO EN PLANTA"))'
+        formula_nivel2     = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:{last_col_letter}, 5, FALSE), "NO ENCONTRADO EN PLANTA"))'
+        formula_nivel3     = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:{last_col_letter}, 6, FALSE), "NO ENCONTRADO EN PLANTA"))'
+        formula_cargo      = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:{last_col_letter}, 8, FALSE), "DOCENTE / FACILITADOR"))'
+        formula_centro_costo = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:{last_col_letter}, 9, FALSE), "GENERAL"))'
+        formula_escuela    = f'=IF(B{r_idx}="","",IFERROR(VLOOKUP(B{r_idx}, PLANTA_BASE!A:{last_col_letter}, {escuela_col_idx}, FALSE), "GENERAL"))'
 
         ws.cell(row=r_idx, column=1, value=formula_invitacion)
         ws.cell(row=r_idx, column=2, value=ced_cell_value)
@@ -1889,6 +1892,13 @@ try:
     import subprocess
     commit_msg = f"Actualización Tablero CUN - {fecha_actualizacion}"
     
+    commit_editmsg = os.path.join(BASE_DIR, ".git", "COMMIT_EDITMSG")
+    if os.path.exists(commit_editmsg):
+        try:
+            os.remove(commit_editmsg)
+        except Exception:
+            pass
+
     subprocess.run(["git", "add", "."], check=True, cwd=BASE_DIR)
     
     status_proc = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=BASE_DIR)
