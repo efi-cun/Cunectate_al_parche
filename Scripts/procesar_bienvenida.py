@@ -1892,6 +1892,12 @@ try:
     import subprocess
     commit_msg = f"Actualización Tablero CUN - {fecha_actualizacion}"
     
+    # Limpiar cualquier archivo lock residual en .git para evitar bloqueos
+    for lock_file in glob.glob(os.path.join(BASE_DIR, ".git", "**", "*.lock"), recursive=True):
+        try:
+            os.remove(lock_file)
+        except Exception:
+            pass
     commit_editmsg = os.path.join(BASE_DIR, ".git", "COMMIT_EDITMSG")
     if os.path.exists(commit_editmsg):
         try:
