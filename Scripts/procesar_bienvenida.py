@@ -16,6 +16,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ASISTENCIA_DIR = os.path.join(BASE_DIR, "Asistencia")
 PLANTA_DIR = os.path.join(BASE_DIR, "Planta")
 EXCEL_OUTPUT = os.path.join(BASE_DIR, "Consolidado_Bienvenida_Facilitadores.xlsx")
+EXCEL_FALTANTES = os.path.join(BASE_DIR, "Facilitadores_Pendientes_Asistencia.xlsx")
 HTML_OUTPUT = os.path.join(BASE_DIR, "tablero.html")
 HTML_RESPALDO = os.path.join(BASE_DIR, "tablero_respaldo.html")
 HTML_INDEX = os.path.join(BASE_DIR, "index.html")
@@ -292,6 +293,15 @@ format_consolidado_with_full_column_formulas(ws_duplicados, df_duplicados)
 ws_planta = wb.create_sheet(title="PLANTA_BASE")
 format_planta_sheet(ws_planta, df_planta_export)
 
+# Hoja 4: Faltantes_Planta (Personas de Planta que NO están en Consolidado Únicos)
+unicos_cedulas_set = set(df_unicos['CEDULA'].dropna().unique())
+df_faltantes_planta = df_planta_export[~df_planta_export['CEDULA'].isin(unicos_cedulas_set)].copy()
+
+ws_faltantes = wb.create_sheet(title="Faltantes_Planta")
+format_planta_sheet(ws_faltantes, df_faltantes_planta)
+
+print(f"      Facilitadores Faltantes de Planta (Sin Asistencia): {len(df_faltantes_planta)}")
+
 # Hoja 4: Resumen_y_Graficos
 ws_resumen = wb.create_sheet(title="Resumen_y_Graficos")
 ws_resumen.views.sheetView[0].showGridLines = True
@@ -422,6 +432,21 @@ except PermissionError:
     alt_out = os.path.join(BASE_DIR, "Consolidado_Bienvenida_Facilitadores_Nuevo.xlsx")
     wb.save(alt_out)
     print(f"      Guardado exitosamente en copia alternativa: {alt_out}")
+
+# Generar archivo Excel independiente exclusivo de Facilitadores Faltantes de Planta Base
+wb_faltantes = openpyxl.Workbook()
+wb_faltantes.remove(wb_faltantes.active)
+ws_f_standalone = wb_faltantes.create_sheet(title="Facilitadores_Faltantes_Planta")
+format_planta_sheet(ws_f_standalone, df_faltantes_planta)
+
+try:
+    wb_faltantes.save(EXCEL_FALTANTES)
+    print(f"      Libro Excel independiente de Facilitadores Faltantes guardado en: {EXCEL_FALTANTES}")
+except PermissionError:
+    print("      ADVERTENCIA: El archivo Facilitadores_Pendientes_Asistencia.xlsx está abierto por el usuario.")
+    alt_f_out = os.path.join(BASE_DIR, "Facilitadores_Pendientes_Asistencia_Nuevo.xlsx")
+    wb_faltantes.save(alt_f_out)
+    print(f"      Guardado exitosamente en copia alternativa: {alt_f_out}")
 
 # 5. Generar Tablero HTML (CON CORRECCIÓN DEL BUSCADOR DE ASISTENTES)
 print("=== PREPARANDO DATOS PARA EL TABLERO HTML (CON BUSCADOR 100% FUNCIONAL) ===")
