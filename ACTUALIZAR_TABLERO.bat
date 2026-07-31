@@ -9,11 +9,14 @@ echo ===========================================================================
 echo.
 
 set SCRIPT_DIR=%~dp0
-set PYTHON_EXE="C:\Program Files\Blender Foundation\Blender 4.0\4.0\python\bin\python.exe"
 
-if not exist %PYTHON_EXE% (
-    set PYTHON_EXE=python
-)
+rem Buscar ejecutable de Python disponible
+set PYTHON_EXE=
+if exist "%USERPROFILE%\scoop\apps\python\3.14.6\python.exe" set PYTHON_EXE="%USERPROFILE%\scoop\apps\python\3.14.6\python.exe"
+if "%PYTHON_EXE%"=="" if exist "%USERPROFILE%\scoop\apps\python\current\python.exe" set PYTHON_EXE="%USERPROFILE%\scoop\apps\python\current\python.exe"
+if "%PYTHON_EXE%"=="" if exist "%USERPROFILE%\scoop\shims\python.exe" set PYTHON_EXE="%USERPROFILE%\scoop\shims\python.exe"
+if "%PYTHON_EXE%"=="" if exist "C:\Program Files\Blender Foundation\Blender 4.0\4.0\python\bin\python.exe" set PYTHON_EXE="C:\Program Files\Blender Foundation\Blender 4.0\4.0\python\bin\python.exe"
+if "%PYTHON_EXE%"=="" set PYTHON_EXE=python
 
 echo Ejecutando script de consolidacion Excel y actualizacion del Tablero HTML...
 echo.
