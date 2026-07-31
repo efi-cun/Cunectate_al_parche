@@ -1905,7 +1905,7 @@ try:
         except Exception:
             pass
 
-    subprocess.run(["git", "add", "."], check=True, cwd=BASE_DIR)
+    subprocess.run(["git", "add", "-A"], check=True, cwd=BASE_DIR)
     
     status_proc = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True, cwd=BASE_DIR)
     if status_proc.stdout.strip():
