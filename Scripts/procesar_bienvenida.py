@@ -246,6 +246,84 @@ print(f"      Total Facilitadores en Base Planta: {total_planta}")
 print(f"      Registros Válidos y Únicos (Consolidado_Unicos): {len(df_unicos)}")
 print(f"      Registros Duplicados / No Encontrados en Planta (Duplicados): {len(df_duplicados)}")
 
+# 3.1 Búsqueda Avanzada por Nombre y Apellido para registros no encontrados por Cédula
+print("      Realizando búsqueda por Nombre y Apellido para registros no encontrados...")
+df_planta_raw['NOMBRE_COMPLETO_SEARCH'] = (df_planta_raw[col_nom_planta].fillna('').astype(str)).apply(clean_text)
+
+busqueda_records = []
+no_encontrados_asist = df_asist_clean[is_not_in_planta].drop_duplicates(subset=['CEDULA', 'NOMBRE'])
+
+for idx, row in no_encontrados_asist.iterrows():
+    ced_a = str(row['CEDULA'])
+    nom_a = str(row['NOMBRE'])
+    nom_clean = clean_text(nom_a)
+    words_a = set([w for w in nom_clean.split() if len(w) > 2])
+    
+    best_p_row = None
+    best_score = 0.0
+    best_status = "NO ENCONTRADO EN PLANTA"
+    
+    if words_a:
+        for p_idx, p_row in df_planta_raw.iterrows():
+            p_nom = p_row['NOMBRE_COMPLETO_SEARCH']
+            words_p = set([w for w in p_nom.split() if len(w) > 2])
+            if not words_p:
+                continue
+            
+            # Coincidencia exacta de conjunto de palabras
+            if words_a == words_p and len(words_a) >= 2:
+                best_score = 1.0
+                best_p_row = p_row
+                best_status = "COINCIDENCIA EXACTA POR NOMBRE"
+                break
+            
+            # Superposición de tokens y Jaccard
+            intersection = words_a.intersection(words_p)
+            union = words_a.union(words_p)
+            jaccard = len(intersection) / len(union) if union else 0
+            
+            if len(intersection) >= 2 and jaccard >= 0.4:
+                if jaccard > best_score:
+                    best_score = jaccard
+                    best_p_row = p_row
+                    best_status = f"COINCIDENCIA ALTA POR NOMBRE ({round(jaccard*100)}%)" if jaccard >= 0.6 else f"COINCIDENCIA PARCIAL ({round(jaccard*100)}%)"
+
+    if best_p_row is not None and best_score >= 0.4:
+        ced_p = str(best_p_row['CEDULA_CLEAN'])
+        nom_p = str(best_p_row[col_nom_planta])
+        car_p = str(best_p_row.get(col_cargo, 'DOCENTE / FACILITADOR'))
+        cc_p  = str(best_p_row.get(col_centro_costo, 'GENERAL'))
+        reg_p = str(best_p_row.get(col_nivel2, 'REGIONAL BOGOTA'))
+        sed_p = str(best_p_row.get(col_nivel3, 'BOGOTA CENTRO'))
+        esc_p = str(best_p_row.get(col_escuela, cc_p))
+    else:
+        ced_p = "NO ENCONTRADO EN PLANTA"
+        nom_p = "SIN COINCIDENCIA EN PLANTA"
+        best_status = "NO ENCONTRADO EN PLANTA"
+        best_score = 0.0
+        car_p = "-"
+        cc_p  = "-"
+        reg_p = "-"
+        sed_p = "-"
+        esc_p = "-"
+
+    busqueda_records.append({
+        'CÉDULA ASISTENCIA': ced_a,
+        'NOMBRE ASISTENCIA': nom_a,
+        'CÉDULA PLANTA ENCONTRADA': ced_p,
+        'NOMBRE PLANTA ENCONTRADO': nom_p,
+        'ESTADO COINCIDENCIA': best_status,
+        'PORCENTAJE SIMILITUD': f"{round(best_score*100)}%",
+        'Descripción Cargo': car_p,
+        'Nombre Centro Costo': cc_p,
+        'Nombre Nivel 2 (Regional)': reg_p,
+        'Nombre Nivel 3 (Sede)': sed_p,
+        'ESCUELA': esc_p
+    })
+
+df_busqueda_nombre = pd.DataFrame(busqueda_records)
+print(f"      Coincidencias por Nombre encontradas para registros no cruzados por cédula: {len(df_busqueda_nombre[df_busqueda_nombre['ESTADO COINCIDENCIA'] != 'NO ENCONTRADO EN PLANTA'])}")
+
 # 4. Generar Libro de Excel con Fórmulas VLOOKUP Desplegadas en 1.500 Filas
 TOTAL_FILAS_DESPLEGADAS = 1500
 print(f"[4/5] Desplegando fórmulas BUSCARV a lo largo de {TOTAL_FILAS_DESPLEGADAS} filas en las columnas...")
@@ -368,6 +446,43 @@ def format_planta_sheet(ws, df_data):
         col_letter = get_column_letter(col[0].column)
         ws.column_dimensions[col_letter].width = 18
 
+def format_busqueda_nombre_sheet(ws, df_data):
+    ws.views.sheetView[0].showGridLines = True
+    headers = list(df_data.columns)
+    ws.append(headers)
+    
+    for col_num, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws.row_dimensions[1].height = 28
+
+    for r_idx, row in enumerate(df_data.itertuples(index=False), start=2):
+        ws.append(list(row))
+        ws.row_dimensions[r_idx].height = 20
+        use_alt = (r_idx % 2 == 0)
+        for c_idx in range(1, len(headers) + 1):
+            cell = ws.cell(row=r_idx, column=c_idx)
+            cell.font = data_font
+            cell.border = cell_border
+            if use_alt:
+                cell.fill = alt_fill
+            
+            header_name = headers[c_idx-1]
+            if header_name in ['CÉDULA ASISTENCIA', 'CÉDULA PLANTA ENCONTRADA']:
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+                if str(cell.value).isdigit():
+                    cell.number_format = '0'
+            elif header_name in ['ESTADO COINCIDENCIA', 'PORCENTAJE SIMILITUD', 'Nombre Nivel 2 (Regional)', 'Nombre Nivel 3 (Sede)', 'ESCUELA']:
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+            else:
+                cell.alignment = Alignment(horizontal="left", vertical="center")
+
+    for col in ws.columns:
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = 24
+
 # Hoja 1: Consolidado_Unicos
 ws_unicos = wb.create_sheet(title="Consolidado_Unicos")
 format_consolidado_with_full_column_formulas(ws_unicos, df_unicos)
@@ -376,11 +491,15 @@ format_consolidado_with_full_column_formulas(ws_unicos, df_unicos)
 ws_duplicados = wb.create_sheet(title="Duplicados")
 format_consolidado_with_full_column_formulas(ws_duplicados, df_duplicados)
 
-# Hoja 3: PLANTA_BASE
+# Hoja 3: Busqueda_por_Nombre (Búsqueda por Nombre para no encontrados por Cédula)
+ws_busqueda = wb.create_sheet(title="Busqueda_por_Nombre")
+format_busqueda_nombre_sheet(ws_busqueda, df_busqueda_nombre)
+
+# Hoja 4: PLANTA_BASE
 ws_planta = wb.create_sheet(title="PLANTA_BASE")
 format_planta_sheet(ws_planta, df_planta_export)
 
-# Hoja 4: Faltantes_Planta (Personas de Planta que NO están en Consolidado Únicos)
+# Hoja 5: Faltantes_Planta (Personas de Planta que NO están en Consolidado Únicos)
 unicos_cedulas_set = set(df_unicos['CEDULA'].dropna().unique())
 df_faltantes_planta = df_planta_export[~df_planta_export['CEDULA'].isin(unicos_cedulas_set)].copy()
 
@@ -389,7 +508,7 @@ format_planta_sheet(ws_faltantes, df_faltantes_planta)
 
 print(f"      Facilitadores Faltantes de Planta (Sin Asistencia): {len(df_faltantes_planta)}")
 
-# Hoja 4: Resumen_y_Graficos
+# Hoja 6: Resumen_y_Graficos
 ws_resumen = wb.create_sheet(title="Resumen_y_Graficos")
 ws_resumen.views.sheetView[0].showGridLines = True
 ws_resumen.cell(row=1, column=1, value="RESUMEN EJECUTIVO DE ASISTENCIA CUN").font = Font(name="Calibri", size=16, bold=True, color="004B28")
