@@ -37,7 +37,7 @@ echo       PROCESO COMPLETADO EXITOSAMENTE!
 echo       - Excel consolidado generado: Consolidado_Bienvenida_Facilitadores.xlsx
 echo       - Excel de faltantes generado: Facilitadores_Pendientes_Asistencia.xlsx
 echo       - Tableros HTML actualizados: tablero.html, tablero_respaldo.html e index.html
-echo       - Repositorio GitHub actualizado: https://github.com/efi-cun/Cunectate_al_parche
+echo       - Sincronizacion GitHub: Realizada o no segun su eleccion en el prompt
 echo ==============================================================================
 echo.
 pause
