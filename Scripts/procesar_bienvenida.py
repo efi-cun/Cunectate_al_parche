@@ -238,24 +238,43 @@ print("[3/5] Validando presencia en Planta, aplicando auto-corrección de cédul
 
 df_planta_raw['NOMBRE_COMPLETO_SEARCH'] = (df_planta_raw[col_nom_planta].fillna('').astype(str)).apply(clean_text)
 
-# 3.0 Corrección automática de cédula para registros no encontrados pero con 100% de coincidencia en nombre
+# 3.0 Corrección automática de cédula y nombre para registros con coincidencia en Planta (por búsqueda de nombre)
 corrected_count = 0
 for idx, row in df_asist_clean.iterrows():
     ced_a = str(row['CEDULA'])
     if ced_a not in planta_cedulas_set:
         nom_a = clean_text(row['NOMBRE'])
         words_a = set([w for w in nom_a.split() if len(w) > 2])
-        if words_a and len(words_a) >= 2:
+        if words_a and len(words_a) >= 1:
+            best_p_row = None
+            best_score = 0.0
             for p_idx, p_row in df_planta_raw.iterrows():
                 words_p = set([w for w in str(p_row['NOMBRE_COMPLETO_SEARCH']).split() if len(w) > 2])
+                if not words_p:
+                    continue
+                
                 if words_a == words_p and len(words_a) >= 2:
-                    ced_p = str(p_row['CEDULA_CLEAN'])
-                    df_asist_clean.loc[idx, 'CEDULA'] = ced_p
-                    corrected_count += 1
+                    best_score = 1.0
+                    best_p_row = p_row
                     break
+                
+                intersection = words_a.intersection(words_p)
+                union = words_a.union(words_p)
+                jaccard = len(intersection) / len(union) if union else 0
+                if len(intersection) >= 2 and jaccard >= 0.4:
+                    if jaccard > best_score:
+                        best_score = jaccard
+                        best_p_row = p_row
+
+            if best_p_row is not None and best_score >= 0.4:
+                ced_p = str(best_p_row['CEDULA_CLEAN'])
+                nom_p = str(best_p_row[col_nom_planta])
+                df_asist_clean.loc[idx, 'CEDULA'] = ced_p
+                df_asist_clean.loc[idx, 'NOMBRE'] = nom_p
+                corrected_count += 1
 
 if corrected_count > 0:
-    print(f"      Auto-corrección ejecutada: {corrected_count} cédula(s) corregida(s) automáticamente por 100% coincidencia de Nombre con Planta.")
+    print(f"      Auto-corrección ejecutada: {corrected_count} registro(s) de asistencia actualizado(s) (Cédula y Nombre de Planta) por coincidencia de búsqueda por nombre.")
 
 is_duplicated_in_asist = df_asist_clean.duplicated(subset=['CEDULA'], keep='first')
 is_not_in_planta = ~df_asist_clean['CEDULA'].isin(planta_cedulas_set)
