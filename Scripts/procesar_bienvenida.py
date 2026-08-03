@@ -44,49 +44,33 @@ def clean_text(txt):
         s = s.replace(old, new)
     return s.strip()
 
-# 1. Cargar y Limpiar Archivo de Asistencia
-csv_files = glob.glob(os.path.join(ASISTENCIA_DIR, "*.csv"))
-if not csv_files:
-    csv_files = glob.glob(os.path.join(ASISTENCIA_DIR, "**", "*.csv"), recursive=True)
+# 1. Cargar y Limpiar Archivo de Asistencia (.xlsx, .xls, .csv)
+asistencia_files = glob.glob(os.path.join(ASISTENCIA_DIR, "*.xlsx")) + \
+                   glob.glob(os.path.join(ASISTENCIA_DIR, "*.xls")) + \
+                   glob.glob(os.path.join(ASISTENCIA_DIR, "*.csv"))
+if not asistencia_files:
+    asistencia_files = glob.glob(os.path.join(ASISTENCIA_DIR, "**", "*.xlsx"), recursive=True) + \
+                       glob.glob(os.path.join(ASISTENCIA_DIR, "**", "*.xls"), recursive=True) + \
+                       glob.glob(os.path.join(ASISTENCIA_DIR, "**", "*.csv"), recursive=True)
 
-if not csv_files:
-    print("ERROR: No se encontró ningún archivo .csv en la carpeta Asistencia.")
+asistencia_files = [f for f in asistencia_files if not os.path.basename(f).startswith("~$") and not os.path.basename(f).startswith("temp_")]
+
+if not asistencia_files:
+    print("ERROR: No se encontró ningún archivo de asistencia (.xlsx, .xls, .csv) en la carpeta Asistencia.")
     sys.exit(1)
 
-csv_files.sort(key=os.path.getmtime, reverse=True)
-asistencia_file = csv_files[0]
+asistencia_files.sort(key=os.path.getmtime, reverse=True)
+
+valid_asistencia_file = None
+for fpath in asistencia_files:
+    if os.path.getsize(fpath) > 500:
+        valid_asistencia_file = fpath
+        break
+if not valid_asistencia_file:
+    valid_asistencia_file = asistencia_files[0]
+
+asistencia_file = valid_asistencia_file
 print(f"[1/5] Limpiando y procesando archivo de Asistencia: {os.path.basename(asistencia_file)}")
-
-try:
-    df_asist_raw = pd.read_csv(asistencia_file, encoding='utf-8')
-except Exception:
-    df_asist_raw = pd.read_csv(asistencia_file, encoding='latin1')
-
-print(f"      Total registros recibidos en Asistencia: {len(df_asist_raw)}")
-
-col_ced_asist = next((c for c in df_asist_raw.columns if 'CEDULA' in str(c).upper() or 'IDENTIFICAC' in str(c).upper()), df_asist_raw.columns[0])
-col_nom_asist = next((c for c in df_asist_raw.columns if 'NAME' in str(c).upper() or 'NOMBRE' in str(c).upper()), df_asist_raw.columns[1] if len(df_asist_raw.columns) > 1 else df_asist_raw.columns[0])
-
-df_asist_clean = pd.DataFrame()
-df_asist_clean['CEDULA'] = pd.to_numeric(df_asist_raw[col_ced_asist], errors='coerce').astype('Int64').astype(str).str.strip()
-
-def format_nombre(val):
-    txt = clean_text(val)
-    if ',' in txt:
-        parts = txt.split(',', 1)
-        return f"{parts[1].strip()} {parts[0].strip()}".upper()
-    return txt.upper()
-
-df_asist_clean['NOMBRE'] = df_asist_raw[col_nom_asist].apply(format_nombre)
-
-# 2. Cargar Base de Planta
-xlsx_files = glob.glob(os.path.join(PLANTA_DIR, "*.xlsx"))
-if not xlsx_files:
-    xlsx_files = glob.glob(os.path.join(PLANTA_DIR, "**", "*.xlsx"), recursive=True)
-
-if not xlsx_files:
-    print("ERROR: No se encontró ningún archivo .xlsx en la carpeta Planta.")
-    sys.exit(1)
 
 def load_excel_safely(file_path):
     try:
@@ -105,40 +89,143 @@ def load_excel_safely(file_path):
             pass
     return pd.ExcelFile(io.BytesIO(content))
 
+if asistencia_file.lower().endswith(('.xlsx', '.xls')):
+    xl_asist = load_excel_safely(asistencia_file)
+    df_asist_raw = pd.read_excel(xl_asist, sheet_name=0)
+else:
+    try:
+        df_asist_raw = pd.read_csv(asistencia_file, encoding='utf-8')
+    except Exception:
+        df_asist_raw = pd.read_csv(asistencia_file, encoding='latin1')
+
+print(f"      Total registros recibidos en Asistencia: {len(df_asist_raw)}")
+
+col_ced_asist = next((c for c in df_asist_raw.columns if 'CEDULA' in clean_text(c).upper() or 'IDENTIFICAC' in clean_text(c).upper() or 'DOCUMENTO' in clean_text(c).upper() or 'ID' in clean_text(c).upper()), df_asist_raw.columns[0])
+col_nom_asist = next((c for c in df_asist_raw.columns if 'NAME' in clean_text(c).upper() or 'NOMBRE' in clean_text(c).upper() or 'FACILITADOR' in clean_text(c).upper() or 'ASISTENTE' in clean_text(c).upper()), df_asist_raw.columns[1] if len(df_asist_raw.columns) > 1 else df_asist_raw.columns[0])
+
+df_asist_clean = pd.DataFrame()
+df_asist_clean['CEDULA'] = pd.to_numeric(df_asist_raw[col_ced_asist], errors='coerce').astype('Int64').astype(str).str.strip()
+
+def format_nombre(val):
+    txt = clean_text(val)
+    if ',' in txt:
+        parts = txt.split(',', 1)
+        return f"{parts[1].strip()} {parts[0].strip()}".upper()
+    return txt.upper()
+
+df_asist_clean['NOMBRE'] = df_asist_raw[col_nom_asist].apply(format_nombre)
+
+# 2. Cargar Base de Planta
+xlsx_files = glob.glob(os.path.join(PLANTA_DIR, "*.xlsx")) + glob.glob(os.path.join(PLANTA_DIR, "*.xls"))
+if not xlsx_files:
+    xlsx_files = glob.glob(os.path.join(PLANTA_DIR, "**", "*.xlsx"), recursive=True) + glob.glob(os.path.join(PLANTA_DIR, "**", "*.xls"), recursive=True)
+
+xlsx_files = [f for f in xlsx_files if not os.path.basename(f).startswith("~$") and not os.path.basename(f).startswith("temp_")]
+
+if not xlsx_files:
+    print("ERROR: No se encontró ningún archivo .xlsx o .xls en la carpeta Planta.")
+    sys.exit(1)
+
+xlsx_files.sort(key=os.path.getmtime, reverse=True)
 planta_file = xlsx_files[0]
 print(f"[2/5] Cargando base de referencia Planta: {os.path.basename(planta_file)}")
 
 xl_planta = load_excel_safely(planta_file)
-sheet_planta = "BASE FACILITADORES PRINCIPAL " if "BASE FACILITADORES PRINCIPAL " in xl_planta.sheet_names else xl_planta.sheet_names[0]
+sheet_planta = next((s for s in xl_planta.sheet_names if "BASE FACILITADORES" in s.upper() or "ACTIVOS" in s.upper() or "PLANTA" in s.upper()), xl_planta.sheet_names[0])
 df_planta_raw = pd.read_excel(xl_planta, sheet_name=sheet_planta)
 
-col_ced_planta = next((c for c in df_planta_raw.columns if 'IDENTIFICAC' in str(c).upper() or 'CEDULA' in str(c).upper()), df_planta_raw.columns[6])
-col_nom_planta = next((c for c in df_planta_raw.columns if 'NOMBRE' in str(c).upper() and 'COMPLETO' in str(c).upper()), df_planta_raw.columns[7])
-col_invitacion = next((c for c in df_planta_raw.columns if 'INVITAC' in str(c).upper()), 'INVITACIÓN')
-col_nivel1 = next((c for c in df_planta_raw.columns if 'NIVEL 1' in str(c).upper()), 'Nombre Nivel 1')
-col_nivel2 = next((c for c in df_planta_raw.columns if 'NIVEL 2' in str(c).upper()), 'Nombre Nivel 2')
-col_nivel3 = next((c for c in df_planta_raw.columns if 'NIVEL 3' in str(c).upper()), 'Nombre Nivel 3')
-col_modalidad_alt = next((c for c in df_planta_raw.columns if 'MODALIDAD' in str(c).upper()), 'Modalidad')
-col_cargo = next((c for c in df_planta_raw.columns if 'CARGO' in str(c).upper()), 'Descripción Cargo')
-col_centro_costo = next((c for c in df_planta_raw.columns if 'CENTRO COSTO' in str(c).upper()), 'Nombre Centro Costo')
-col_escuela = next((c for c in df_planta_raw.columns if 'ESCUELA' in str(c).upper()), 'ESCUELA')
+# Detección flexible de columnas en Planta
+col_ced_planta = next((c for c in df_planta_raw.columns if 'IDENTIFICAC' in clean_text(c).upper() or 'CEDULA' in clean_text(c).upper() or 'DOCUMENTO' in clean_text(c).upper()), df_planta_raw.columns[0])
+
+col_nom_planta = next((c for c in df_planta_raw.columns if 'NOMBRE' in clean_text(c).upper() and 'COMPLETO' in clean_text(c).upper()), None)
+if not col_nom_planta:
+    nombres_col = next((c for c in df_planta_raw.columns if clean_text(c).upper() in ['NOMBRES', 'NOMBRE']), None)
+    apellidos_col = next((c for c in df_planta_raw.columns if clean_text(c).upper() in ['APELLIDOS', 'APELLIDO']), None)
+    if nombres_col and apellidos_col:
+        df_planta_raw['NOMBRE COMPLETO'] = df_planta_raw[nombres_col].fillna('').astype(str).str.strip() + " " + df_planta_raw[apellidos_col].fillna('').astype(str).str.strip()
+        df_planta_raw['NOMBRE COMPLETO'] = df_planta_raw['NOMBRE COMPLETO'].str.strip()
+        col_nom_planta = 'NOMBRE COMPLETO'
+    elif nombres_col:
+        col_nom_planta = nombres_col
+    else:
+        col_nom_planta = df_planta_raw.columns[1] if len(df_planta_raw.columns) > 1 else df_planta_raw.columns[0]
+
+col_invitacion = next((c for c in df_planta_raw.columns if 'INVITAC' in clean_text(c).upper()), None)
+col_modalidad_alt = next((c for c in df_planta_raw.columns if 'MODALIDAD' in clean_text(c).upper()), None)
+if not col_invitacion:
+    if col_modalidad_alt:
+        df_planta_raw['INVITACIÓN'] = df_planta_raw[col_modalidad_alt]
+    else:
+        df_planta_raw['INVITACIÓN'] = 'VIRTUAL'
+    col_invitacion = 'INVITACIÓN'
+
+if not col_modalidad_alt:
+    col_modalidad_alt = col_invitacion
+
+col_nivel1 = next((c for c in df_planta_raw.columns if 'NIVEL 1' in clean_text(c).upper() or 'NIVEL1' in clean_text(c).upper()), None)
+if not col_nivel1:
+    df_planta_raw['Nombre Nivel 1'] = 'OPERACIONES'
+    col_nivel1 = 'Nombre Nivel 1'
+
+col_nivel2 = next((c for c in df_planta_raw.columns if 'NIVEL 2' in clean_text(c).upper() or 'NIVEL2' in clean_text(c).upper()), None)
+if not col_nivel2:
+    df_planta_raw['Nombre Nivel 2'] = 'REGIONAL BOGOTA'
+    col_nivel2 = 'Nombre Nivel 2'
+
+col_nivel3 = next((c for c in df_planta_raw.columns if 'NIVEL 3' in clean_text(c).upper() or 'NIVEL3' in clean_text(c).upper()), None)
+if not col_nivel3:
+    df_planta_raw['Nombre Nivel 3'] = 'BOGOTA CENTRO'
+    col_nivel3 = 'Nombre Nivel 3'
+
+col_cargo = next((c for c in df_planta_raw.columns if 'CARGO' in clean_text(c).upper()), None)
+if not col_cargo:
+    df_planta_raw['Descripción Cargo'] = 'DOCENTE / FACILITADOR'
+    col_cargo = 'Descripción Cargo'
+
+col_centro_costo = next((c for c in df_planta_raw.columns if 'CENTRO COSTO' in clean_text(c).upper() or 'CENTRO_COSTO' in clean_text(c).upper()), None)
+if not col_centro_costo:
+    df_planta_raw['Nombre Centro Costo'] = 'GENERAL'
+    col_centro_costo = 'Nombre Centro Costo'
+
+col_escuela = next((c for c in df_planta_raw.columns if 'ESCUELA' in clean_text(c).upper()), None)
+if not col_escuela:
+    df_planta_raw['ESCUELA'] = df_planta_raw[col_centro_costo]
+    col_escuela = 'ESCUELA'
+
+col_correo_corp = next((c for c in df_planta_raw.columns if 'CORREO CORPORATIVO' in clean_text(c).upper() or 'CORREO' in clean_text(c).upper()), None)
+col_correo_pers = next((c for c in df_planta_raw.columns if 'CORREO PERSONAL' in clean_text(c).upper()), None)
+col_telefono = next((c for c in df_planta_raw.columns if 'TELEFONO' in clean_text(c).upper() or 'CELULAR' in clean_text(c).upper()), None)
+col_tipo_contrato = next((c for c in df_planta_raw.columns if 'TIPO CONTRATO' in clean_text(c).upper() or 'CONTRATO' in clean_text(c).upper()), None)
+col_fecha_inicio = next((c for c in df_planta_raw.columns if 'FECHA INICIO' in clean_text(c).upper()), None)
+col_fecha_venc = next((c for c in df_planta_raw.columns if 'FECHA VENCIMIENTO' in clean_text(c).upper()), None)
+col_centro_trabajo = next((c for c in df_planta_raw.columns if 'CENTRO TRABAJO' in clean_text(c).upper()), None)
 
 df_planta_raw['CEDULA_CLEAN'] = pd.to_numeric(df_planta_raw[col_ced_planta], errors='coerce').astype('Int64').astype(str).str.strip()
 planta_cedulas_set = set(df_planta_raw['CEDULA_CLEAN'].dropna().unique())
 total_planta = len(df_planta_raw)
 
-# Reorganizar PLANTA_BASE con CÉDULA en Columna A (Col 1)
-planta_cols_ordered = [
-    'CEDULA_CLEAN',
-    col_invitacion,
-    col_nom_planta,
-    col_nivel1,
-    col_nivel2,
-    col_nivel3,
-    col_modalidad_alt,
-    col_cargo,
-    col_centro_costo
+# Estructurar PLANTA_BASE alineado con fórmulas VLOOKUP (Columnas A a Q)
+planta_cols_key = [
+    'CEDULA_CLEAN',      # 1 (A)
+    col_invitacion,      # 2 (B)
+    col_nom_planta,      # 3 (C)
+    col_nivel1,          # 4 (D)
+    col_nivel2,          # 5 (E)
+    col_nivel3,          # 6 (F)
+    col_modalidad_alt,   # 7 (G)
+    col_cargo,           # 8 (H)
+    col_centro_costo,    # 9 (I)
+    col_correo_corp,     # 10 (J)
+    col_correo_pers,     # 11 (K)
+    col_telefono,        # 12 (L)
+    col_tipo_contrato,   # 13 (M)
+    col_fecha_inicio,    # 14 (N)
+    col_fecha_venc,      # 15 (O)
+    col_centro_trabajo,  # 16 (P)
+    col_escuela          # 17 (Q)
 ]
+
+planta_cols_ordered = [c for c in planta_cols_key if c is not None]
 for c in df_planta_raw.columns:
     if c not in planta_cols_ordered and c != col_ced_planta:
         planta_cols_ordered.append(c)
