@@ -201,7 +201,7 @@ col_fecha_venc = next((c for c in df_planta_raw.columns if 'FECHA VENCIMIENTO' i
 col_centro_trabajo = next((c for c in df_planta_raw.columns if 'CENTRO TRABAJO' in clean_text(c).upper()), None)
 
 df_planta_raw['CEDULA_CLEAN'] = pd.to_numeric(df_planta_raw[col_ced_planta], errors='coerce').astype('Int64').astype(str).str.strip()
-planta_cedulas_set = set(df_planta_raw['CEDULA_CLEAN'].dropna().unique())
+planta_cedulas_set = set(c for c in df_planta_raw['CEDULA_CLEAN'].dropna().unique() if str(c).strip() and str(c).upper() not in ['<NA>', 'NAN', 'NONE', ''])
 total_planta = len(df_planta_raw)
 
 # Estructurar PLANTA_BASE alineado con fórmulas VLOOKUP (Columnas A a Q)
@@ -276,8 +276,9 @@ for idx, row in df_asist_clean.iterrows():
 if corrected_count > 0:
     print(f"      Auto-corrección ejecutada: {corrected_count} registro(s) de asistencia actualizado(s) (Cédula y Nombre de Planta) por coincidencia de búsqueda por nombre.")
 
-is_duplicated_in_asist = df_asist_clean.duplicated(subset=['CEDULA'], keep='first')
-is_not_in_planta = ~df_asist_clean['CEDULA'].isin(planta_cedulas_set)
+is_invalid_ced = df_asist_clean['CEDULA'].astype(str).str.strip().str.upper().isin(['<NA>', 'NAN', 'NONE', ''])
+is_duplicated_in_asist = df_asist_clean.duplicated(subset=['CEDULA'], keep='first') & ~is_invalid_ced
+is_not_in_planta = ~df_asist_clean['CEDULA'].isin(planta_cedulas_set) | is_invalid_ced
 
 df_duplicados = df_asist_clean[is_duplicated_in_asist | is_not_in_planta].copy()
 df_unicos = df_asist_clean[~is_duplicated_in_asist & ~is_not_in_planta].copy()
@@ -1780,15 +1781,13 @@ html_content = f"""<!DOCTYPE html>
         function renderAsistentesModal(filterText = '') {{
             asistentesTableBody.innerHTML = '';
             const query = filterText ? String(filterText).toLowerCase().trim() : '';
+            const tokens = query.split(/\s+/).filter(t => t.length > 0);
             
-            const filtered = asistentesData.filter(a => 
-                (a.nombre && a.nombre.toLowerCase().includes(query)) ||
-                (a.cedula && a.cedula.toLowerCase().includes(query)) ||
-                (a.escuela && a.escuela.toLowerCase().includes(query)) ||
-                (a.centro_costo && a.centro_costo.toLowerCase().includes(query)) ||
-                (a.regional && a.regional.toLowerCase().includes(query)) ||
-                (a.modalidad && a.modalidad.toLowerCase().includes(query))
-            );
+            const filtered = asistentesData.filter(a => {{
+                if (tokens.length === 0) return true;
+                const fullText = `${{a.nombre || ''}} ${{a.cedula || ''}} ${{a.escuela || ''}} ${{a.centro_costo || ''}} ${{a.regional || ''}} ${{a.sede || ''}} ${{a.cargo || ''}} ${{a.modalidad || ''}} ${{a.invitacion || ''}}`.toLowerCase();
+                return tokens.every(token => fullText.includes(token));
+            }});
 
             asistentesCounter.innerText = `${{filtered.length}} / ${{asistentesData.length}}`;
 
