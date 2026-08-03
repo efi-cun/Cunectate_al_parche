@@ -233,8 +233,29 @@ for c in df_planta_raw.columns:
 df_planta_export = df_planta_raw[planta_cols_ordered].copy()
 df_planta_export.rename(columns={'CEDULA_CLEAN': 'CEDULA'}, inplace=True)
 
-# 3. Deduplicación y Validación contra Planta
-print("[3/5] Validando presencia en Planta y detectando duplicados...")
+# 3. Auto-corrección de Cédulas por 100% Coincidencia en Nombre y Validación contra Planta
+print("[3/5] Validando presencia en Planta, aplicando auto-corrección de cédulas por 100% en nombre y detectando duplicados...")
+
+df_planta_raw['NOMBRE_COMPLETO_SEARCH'] = (df_planta_raw[col_nom_planta].fillna('').astype(str)).apply(clean_text)
+
+# 3.0 Corrección automática de cédula para registros no encontrados pero con 100% de coincidencia en nombre
+corrected_count = 0
+for idx, row in df_asist_clean.iterrows():
+    ced_a = str(row['CEDULA'])
+    if ced_a not in planta_cedulas_set:
+        nom_a = clean_text(row['NOMBRE'])
+        words_a = set([w for w in nom_a.split() if len(w) > 2])
+        if words_a and len(words_a) >= 2:
+            for p_idx, p_row in df_planta_raw.iterrows():
+                words_p = set([w for w in str(p_row['NOMBRE_COMPLETO_SEARCH']).split() if len(w) > 2])
+                if words_a == words_p and len(words_a) >= 2:
+                    ced_p = str(p_row['CEDULA_CLEAN'])
+                    df_asist_clean.loc[idx, 'CEDULA'] = ced_p
+                    corrected_count += 1
+                    break
+
+if corrected_count > 0:
+    print(f"      Auto-corrección ejecutada: {corrected_count} cédula(s) corregida(s) automáticamente por 100% coincidencia de Nombre con Planta.")
 
 is_duplicated_in_asist = df_asist_clean.duplicated(subset=['CEDULA'], keep='first')
 is_not_in_planta = ~df_asist_clean['CEDULA'].isin(planta_cedulas_set)
@@ -246,10 +267,8 @@ print(f"      Total Facilitadores en Base Planta: {total_planta}")
 print(f"      Registros Válidos y Únicos (Consolidado_Unicos): {len(df_unicos)}")
 print(f"      Registros Duplicados / No Encontrados en Planta (Duplicados): {len(df_duplicados)}")
 
-# 3.1 Búsqueda Avanzada por Nombre y Apellido para registros no encontrados por Cédula
+# 3.1 Búsqueda Avanzada por Nombre y Apellido para registros pendientes en no encontrados por Cédula
 print("      Realizando búsqueda por Nombre y Apellido para registros no encontrados...")
-df_planta_raw['NOMBRE_COMPLETO_SEARCH'] = (df_planta_raw[col_nom_planta].fillna('').astype(str)).apply(clean_text)
-
 busqueda_records = []
 no_encontrados_asist = df_asist_clean[is_not_in_planta].drop_duplicates(subset=['CEDULA', 'NOMBRE'])
 
